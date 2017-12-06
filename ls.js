@@ -76,7 +76,7 @@ function loading() {
     setTimeout(loading1, 100);
     setTimeout(loading2, 700);
     setTimeout(loading3, 1300);
-    setTimeout(dissolveLoading, 1900);
+    setTimeout(dissolveLoadingScreen, 1900);
 
 }
 
@@ -90,21 +90,43 @@ function loading3() {
     $('#loadingtext')[0].innerHTML += ".";
 }
 
-function dissolveLoading() {
+function dissolveLoadingScreen() {
     console.log('loading done');
     $('#loadingtext').hide();
     $('#dataoptionexpand').animate({
         "font-size": "100px",
         "opacity": "0"
-    }, 200)
+    }, 200,function(){
+        $('#dataoptionexpand').remove();
+        $('#loadingtext').remove();
+    })
     graphView();
 }
 
 function graphView() {
-    enabledDragging();
+    enableDragging();
+    buildGraphs();
 }
 
-function enabledDragging() {
+function buildGraphs(){
+    graphContainer=document.createElement('div');
+    graphContainer.setAttribute('id','graph-container');
+    
+    can1=document.createElement('canvas');
+    can1.setAttribute('id','graph1');
+    $(graphContainer).append(can1);
+    $('#main').append(graphContainer);
+    ctx1=can1.getContext('2d');
+    exampleGraph(ctx1);
+}
+
+function exampleGraph(context){
+    context.rect(10,10,20,20);
+    
+    context.fill();
+}
+
+function enableDragging() {
     d = document.createElement('div');
     d.setAttribute('id', 'dragbox');
     $('#main').append(d);
