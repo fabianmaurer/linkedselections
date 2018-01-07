@@ -99,14 +99,31 @@ body{
     background-color:#40cc40;
 }
 
-#loadingText{
+#loading-text{
     position:absolute;
     text-align: center;
     width:100%;
-    bottom:0;
-    font-family:'Times New Roman', Times, serif;
-    font-size:140px;
+    bottom:40px;
+    font-family:'Calibri', Times, serif;
+    font-size:30px;
     color:white;
+}
+
+#loading-bar{
+    position: absolute;
+    text-align:center;
+    width:100%;
+    bottom:90px;
+}
+
+.loading-segment{
+    width:50px;
+    height:12px;
+    background:rgba(0,0,0,0.4);
+    display:inline-block;
+    margin:0px 10px 0px 10px;
+    border-radius:2px;
+    transition:background-color 0.2s ease;
 }
 
 #dragbox{
@@ -118,6 +135,37 @@ body{
     display:none;
 }
 
+#worldmap{
+    width:700px;
+    height:451px;
+}
+
+#worldmap-object{
+    width:100%;
+    height:100%;
+}
+
+
 #graph-container{
+    text-align:center;
+}
+
+.graph{
+    margin:20px;
+    display:inline-block;
+    width:300px;
+    height:300px;
+    box-shadow:0px 0px 5px rgba(0,0,0,0.5);
+}
+
+#wrapper{
+    height:200px;
+    transform:perspective(200px) rotateY(20deg);
+}
+
+#thumbnail{
+    height:200px;
+    width:200px;
+    position:absolute;
     
 }

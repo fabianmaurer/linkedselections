@@ -3,6 +3,7 @@ let data = [];
 let mousex = 0;
 let mousey = 0;
 let dragging = false;
+let numGraphs=3;
 $('#choosedatabtn').focusout(function () {
     $('#choosedatabtn').removeClass('choosedataexpand');
     let h1 = $('#choosedatabtn').height() - 20;
@@ -39,6 +40,8 @@ $('#choosedatabtn').focus(function () {
     $(c).animate({ 'height': h + 'px' });
 });
 
+
+
 function datasetChosen(i, tgt) {
     let position = $(tgt).offset();
     let w = $(tgt).width() * 1.5;
@@ -71,28 +74,50 @@ function datasetChosen(i, tgt) {
 
 function loading() {
     let l = document.createElement('div');
-    l.setAttribute('id', 'loadingtext');
+    l.setAttribute('id', 'loading-bar');
     $('#main').append(l);
-    setTimeout(loading1, 100);
-    setTimeout(loading2, 700);
-    setTimeout(loading3, 1300);
-    setTimeout(dissolveLoadingScreen, 1900);
+    for(let i=0;i<3;i++){
+        let p=document.createElement('div');
+        p.setAttribute('class','loading-segment');
+        p.setAttribute('id','lseg'+i);
+        $(l).append(p);
+    }
+    let lt=document.createElement('div');
+    lt.setAttribute('id','loading-text');
+    $('#main').append(lt);
+    loading1();
+    setTimeout(loading2, 1000);
+    setTimeout(loading3, 2000);
+    
+    setTimeout(dissolveLoadingScreen, 2400);
 
 }
 
 function loading1() {
-    $('#loadingtext')[0].innerHTML += ".";
+    $('#loading-text')[0].innerHTML = "Loading data...";
+    $('#lseg0').css('background-color','orange');
 }
 function loading2() {
-    $('#loadingtext')[0].innerHTML += ".";
+    $('#loading-text')[0].innerHTML = "Starting session...";
+    $('#lseg0').css('background-color','blue');
+    $('#lseg1').css('background-color','orange');
 }
 function loading3() {
-    $('#loadingtext')[0].innerHTML += ".";
+    $('#loading-text')[0].innerHTML = "Building graphs...";
+    $('#lseg1').css('background-color','blue');
+    $('#lseg2').css('background-color','orange');
 }
 
 function dissolveLoadingScreen() {
+    $('#lseg2').css('background-color','blue');
+    $('#loading-text').hide();
     console.log('loading done');
-    $('#loadingtext').hide();
+    hideLoadingScreen();
+}
+
+function hideLoadingScreen(){
+    $('#loading-text').hide();
+    $('#loading-bar').hide();
     $('#dataoptionexpand').animate({
         "font-size": "100px",
         "opacity": "0"
@@ -105,33 +130,59 @@ function dissolveLoadingScreen() {
 
 function graphView() {
     enableDragging();
+    initGraphView();
     buildGraphs();
+}
+
+function initGraphView(){
+    let graphContainer=document.createElement('div');
+    graphContainer.setAttribute('id','graph-container');
+    
+    let wm=document.createElement('div');
+    wm.setAttribute('class','graph');
+    wm.setAttribute('id','worldmap');
+    let obj=document.createElement('object');
+    obj.setAttribute('data','worldLow.svg');
+    obj.setAttribute('type','image/svg+xml');
+    obj.setAttribute('id','worldmap-object');
+    $(wm).append(obj);
+    $(graphContainer).append(wm);
+    $(graphContainer).append('<br>')
+    for(let i=0;i<numGraphs;i++){
+        let g=document.createElement('div');
+        g.setAttribute('class','graph');
+        $(graphContainer).append(g);
+    }
+    $('#main').append(graphContainer);
+    let a=document.getElementById('worldmap-object');
+    /*a.addEventListener("load",function(){
+
+        // get the inner DOM of alpha.svg
+        var svgDoc = a.contentDocument;
+        // get the inner element by id
+        var delta = svgDoc.getElementsByClass("land");
+        // add behaviour
+        for(let i=0;i<delta.length;i++){
+            delta[i].addEventListener("mousedown",function(){
+                alert('hello world!')
+            }, false);
+        }
+    }, false);*/
 }
 
 function buildGraphs(){
     graphContainer=document.createElement('div');
-    graphContainer.setAttribute('id','graph-container');
     
-    can1=document.createElement('canvas');
-    can1.setAttribute('id','graph1');
-    $(graphContainer).append(can1);
+    
     $('#main').append(graphContainer);
-    ctx1=can1.getContext('2d');
-    exampleGraph(ctx1);
 }
 
-function exampleGraph(context){
-    context.rect(10,10,20,20);
-    
-    context.fill();
-}
 
 function enableDragging() {
     d = document.createElement('div');
     d.setAttribute('id', 'dragbox');
     $('#main').append(d);
     $(window).mousedown(function (e) {
-
         mousex = e.clientX;
         mousey = e.clientY;
         $('#dragbox').css('top', mousey + 'px');
