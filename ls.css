@@ -136,6 +136,7 @@ body{
 }
 
 #worldmap{
+    background:none;
     width:700px;
     height:451px;
 }
@@ -151,6 +152,7 @@ body{
 }
 
 .graph{
+    background-color:white;
     margin:8px;
     display:inline-block;
     width:300px;

@@ -277,14 +277,16 @@ function drawScatterPlot(dataX, dataY, ctx) {
     ctx.clearRect(0, 0, width, height);
     ctx.globalAlpha = 0.5;
     ctx.beginPath();
+    let first=true;
     for (let i = 0; i < data.length; i++) {
-        if (enabled[i] && (data[i]!=null)) {
+        if (data[i]!=null) {
             let cur = data[i];
-            if (i == 0) {
+            if (first) {
                 minX = cur[dataX];
                 maxX = cur[dataX];
                 minY = cur[dataY];
                 maxY = cur[dataY];
+                first=false;
             } else {
                 minX = Math.min(minX, cur[dataX]);
                 maxX = Math.max(maxX, cur[dataX]);
