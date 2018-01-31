@@ -8,6 +8,12 @@ let nameToIndex = {};
 let indexToName = [];
 let enabled = [];
 let contexts = [];
+let $graphs=[];
+let graphXPos=[];
+let graphYPos=[];
+let countryIdMap={};
+let count=0;
+let asyncAddQueue=[];
 $('#choosedatabtn').focusout(function () {
     $('#choosedatabtn').removeClass('choosedataexpand');
     let h1 = $('#choosedatabtn').height() - 20;
@@ -204,19 +210,39 @@ function worldmapListeners() {
     for (let i = 0; i < a.length; i++) {
         a[i].addEventListener("mousedown", function (e) {
 
-            if (e.target.getAttribute('class') == 'land')
-                e.target.setAttribute('class', 'land-active');
-            else
-                e.target.setAttribute('class', 'land');
-            enableCountry(e.target.getAttribute('title'));
-            refreshGraphs();
+            
+            toggleCountry(e.target.getAttribute('title'));
         }, false);
+        
+        countryIdMap[a[i].getAttribute('title')]=a[i].getAttribute('id');
+        
     }
 }
 
-function enableCountry(title) {
-    enabled[nameToIndex[title]] = !enabled[nameToIndex[title]];
-    console.log(title + ' selected');
+function toggleCountry(name) {
+    count++;
+    enabled[nameToIndex[name]] = !enabled[nameToIndex[name]];
+    if(countryIdMap[name]!=null){
+        $('#'+countryIdMap[name]).toggleClass('land-active').toggleClass('land');
+    }else{
+        console.log('id not found for: '+name)
+    
+    }
+    $(".graph-circle."+countryIdMap[name]).toggleClass('enabled');
+}
+
+function asyncAdd(){
+    for(let i=0;i<10;i++){
+        if(asyncAddQueue.length>0){
+            name=asyncAddQueue.shift();
+            $(".graph-circle."+name).toggleClass('enabled');
+            if(countryIdMap[name]!=null){
+                $('#'+countryIdMap[name]).toggleClass('land-active').toggleClass('land');
+            }
+        }
+    }
+    
+    requestAnimationFrame(asyncAdd);
 }
 
 function buildGraphs() {
@@ -229,19 +255,23 @@ function buildGraphs() {
         $(c[i]).append(can);
         let ctx = can.getContext('2d');
         contexts.push(ctx);
+        $graphs.push($(c[i]));
         //drawScatterPlot('Human Development Index HDI-2014','Change mobile usage 2009 2014',ctx);
     }
-    refreshGraphs();
+    drawGraphs();
 }
 
-function refreshGraphs() {
+function drawGraphs() {
     let c = $('.graph');
     for (let i = 0; i < contexts.length; i++) {
-
-        if(i==0) drawScatterPlot('Human Development Index HDI-2014', 'Change mobile usage 2009 2014', contexts[i]);
-        if(i==1) drawScatterPlot('Internet users percentage of population 2014', 'MaleSuicide Rate 100k people', contexts[i]);
-        if(i==2) drawScatterPlot('Expected years of schooling - Years', 'Public expenditure on education Percentange GDP', contexts[i]);
+        graphXPos[i]=[];
+        graphYPos[i]=[];
+        
+        if(i==0) drawScatterPlot('Human Development Index HDI-2014', 'Change mobile usage 2009 2014', contexts[i],$graphs[i],i);
+        if(i==1) drawScatterPlot('Internet users percentage of population 2014', 'MaleSuicide Rate 100k people', contexts[i],$graphs[i],i);
+        if(i==2) drawScatterPlot('Expected years of schooling - Years', 'Public expenditure on education Percentange GDP', contexts[i],$graphs[i],i);
     }
+    asyncAdd();
 }
 
 function buildNamesMaps() {
@@ -268,8 +298,10 @@ function sortData() {
     data = newdata;
 }
 
-function drawScatterPlot(dataX, dataY, ctx) {
-    
+
+
+function drawScatterPlot(dataX, dataY, ctx, $graph,index) {
+    console.log('drawing');
     let maxX = 0, minX = 0, maxY = 0, minY = 0;
     let width = 300, height = 300, r = 3,margin=20;
     
@@ -296,15 +328,26 @@ function drawScatterPlot(dataX, dataY, ctx) {
         }
     }
     for (let i = 0; i < data.length; i++) {
-        if (enabled[i] && (data[i]!=null)) {
+        if ((data[i]!=null)) {
             let cur = data[i];
             let x = (cur[dataX] - minX) * (width-40) / (maxX - minX)+20;
             let y = (cur[dataY] - minY) * (height-40) / (maxY - minY)+20;
+            let c=document.createElement('div');
+            c.setAttribute('class','graph-circle '+countryIdMap[indexToName[i]]);
+            let t=document.createElement('div');
+            t.setAttribute('class','tooltip');
+            t.innerHTML='tooltip';
+            c.append(t);
+            $(c).css({'top':y+'px','left':x+'px'})
+            $graph.append(c);
+            graphXPos[index][i]=$graph.offset().left+x;
+            graphYPos[index][i]=$graph.offset().top+y;
+            
             ctx.moveTo(x + r, y);
             ctx.arc(x, y, r, 0, 2 * Math.PI);
         }
     }
-    ctx.fill();
+    //ctx.fill();
 
     ctx.globalAlpha=1;
     ctx.beginPath();
@@ -328,7 +371,7 @@ function enableDragging() {
     d.setAttribute('id', 'dragbox');
     $('#main').append(d);
     $(window).mousedown(function (e) {
-
+        e.stopPropagation();
         //console.log($e.contentDocument);
         mousex = e.clientX;
         mousey = e.clientY;
@@ -341,7 +384,10 @@ function enableDragging() {
         dragging = true;
     });
     $(window).mouseup(function (e) {
-        if (dragging) $('#dragbox').hide();
+        if (dragging){
+            $('#dragbox').hide();
+            dragging=false;
+        }
     });
 
     $(window).mousemove(function (e) {
@@ -360,6 +406,36 @@ function enableDragging() {
                 $('#dragbox').css('top', mousey + 'px');
                 $('#dragbox').css('bottom', $(window).height() - e.clientY + 'px');
             }
+            let left=Math.min(e.clientX,mousex);
+            let right=Math.max(e.clientX,mousex);
+            let bottom=Math.min(e.clientY,mousey);
+            let top=Math.max(e.clientY,mousey);
+            let flags1=[];
+            let flags2=[];
+            for(let i=0;i<graphXPos.length;i++){
+                
+                for(let j=0;j<graphXPos[i].length;j++){
+                    if((left<=graphXPos[i][j])&&(right>=graphXPos[i][j])&&(bottom<=graphYPos[i][j])&&(top>=graphYPos[i][j])){
+                        if(!enabled[j]){
+                            toggleCountry(indexToName[j]);
+                        }
+                        flags1[j]=true;
+                    }else{
+                        if(enabled[j]){
+                            //toggleCountry(indexToName[j]);
+                            flags2[j]=true;
+                        }
+                        
+                    }
+                }
+            }
+            for(let i=0;i<Math.max(flags1.length,flags2.length);i++){
+                if(flags2[i] && !flags1[i]){
+                    toggleCountry(indexToName[i]);
+                    //console.log('oi');
+                }
+            }
+
         }
 
     });

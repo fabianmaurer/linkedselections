@@ -1,11 +1,13 @@
 body{
     margin:0;
+    background-color:lightcyan;
+    user-select: none;
 }
 #main{
     height:100%;
     width:100%;
     display:table;
-    background-color:lightcyan;
+    
 }
 #choosedata{
     display:table-cell;
@@ -127,12 +129,14 @@ body{
 }
 
 #dragbox{
+    pointer-events: none;
     position: absolute;
     border:1px solid #666;
     /*background-color:rgba(0,0,0,0.2);*/
     box-shadow:0px 0px 5px rgba(0,0,0,0.5);
     overflow:hidden;
     display:none;
+    z-index:1000;
 }
 
 #worldmap{
@@ -158,6 +162,7 @@ body{
     width:300px;
     height:300px;
     box-shadow:0px 0px 5px rgba(0,0,0,0.5);
+    position: relative;
 }
 
 #wrapper{
@@ -170,4 +175,41 @@ body{
     width:200px;
     position:absolute;
     
+}
+
+.graph-circle{
+    border-radius:50%;
+    width:8px;
+    height:8px;
+    position:absolute;
+    display:inline-block;
+    background-color:rgba(0,0,0,0.25);
+    margin-left:-3.5px;
+    margin-top:-4px;
+    transition:all 0.2s ease;
+    transform-origin:50% 50%;
+}
+
+.enabled{
+    background-color:rgba(66,100,205,0.75);
+    z-index:1;
+}
+
+.graph-circle .tooltip{
+    font-size: 12px;
+    padding:2px;
+    pointer-events: none;
+    opacity:0;
+    background-color:rgba(255,255,255,0.8);
+    color:black;
+    border:1px solid #ccc;
+    border-radius:2px;
+    position: absolute;
+    bottom:100%;
+    transition:opacity 0.2s ease;
+    z-index:2;
+}
+
+.graph-circle:hover .tooltip{
+    opacity:1;
 }
