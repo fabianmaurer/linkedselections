@@ -213,3 +213,8 @@ body{
 .graph-circle:hover .tooltip{
     opacity:1;
 }
+
+.axisnumber{
+    position:absolute;
+    font-size:8px;
+}

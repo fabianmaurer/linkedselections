@@ -228,17 +228,16 @@ function toggleCountry(name) {
         console.log('id not found for: '+name)
     
     }
-    $(".graph-circle."+countryIdMap[name]).toggleClass('enabled');
+    asyncAddQueue.push(name);
+    //$(".graph-circle."+countryIdMap[name]).toggleClass('enabled');
 }
 
 function asyncAdd(){
     for(let i=0;i<10;i++){
         if(asyncAddQueue.length>0){
             name=asyncAddQueue.shift();
-            $(".graph-circle."+name).toggleClass('enabled');
-            if(countryIdMap[name]!=null){
-                $('#'+countryIdMap[name]).toggleClass('land-active').toggleClass('land');
-            }
+            $(".graph-circle."+countryIdMap[name]).toggleClass('enabled');
+            
         }
     }
     
@@ -304,11 +303,6 @@ function drawScatterPlot(dataX, dataY, ctx, $graph,index) {
     console.log('drawing');
     let maxX = 0, minX = 0, maxY = 0, minY = 0;
     let width = 300, height = 300, r = 3,margin=20;
-    
-    ctx.fillStyle = '#4264cd';
-    ctx.clearRect(0, 0, width, height);
-    ctx.globalAlpha = 0.5;
-    ctx.beginPath();
     let first=true;
     for (let i = 0; i < data.length; i++) {
         if (data[i]!=null) {
@@ -342,14 +336,8 @@ function drawScatterPlot(dataX, dataY, ctx, $graph,index) {
             $graph.append(c);
             graphXPos[index][i]=$graph.offset().left+x;
             graphYPos[index][i]=$graph.offset().top+y;
-            
-            ctx.moveTo(x + r, y);
-            ctx.arc(x, y, r, 0, 2 * Math.PI);
         }
     }
-    //ctx.fill();
-
-    ctx.globalAlpha=1;
     ctx.beginPath();
     ctx.translate(margin,margin);
     ctx.moveTo(0,0);
@@ -357,10 +345,33 @@ function drawScatterPlot(dataX, dataY, ctx, $graph,index) {
     ctx.moveTo(0,0);
     ctx.lineTo(0,height-2*margin);
     ctx.stroke();
+    let dx=maxX-minX;
+    let dy=maxY-minY;
+    let stepx=Math.pow(10,Math.round(Math.log10(dx))-1);
+    console.log(stepx);
+    let stepy=Math.pow(10,Math.round(Math.log10(dy))-1);
+    ctx.strokestyle='999';
+    ctx.beginPath();
+    for(let i=Math.ceil(minX/stepx)*stepx-minX;i<=dx;i=i+stepx){
+        let x = i * (width-40) / (dx);
+        ctx.moveTo(x,-3);
+        ctx.lineTo(x,3);
+        let txt=document.createElement('div');
+        txt.setAttribute('class','axisnumber');
+        txt.innerHTML=Math.round((minX+i)*100)/100;
+        $(txt).css({'top':'9px','left':21+x+'px'})
+        $graph.append(txt);
+    }
+    for(let i=Math.ceil(minY/stepy)*stepy-minY;i<=dy;i=i+stepy){
+        let y = i * (height-40) / (dy);
+        ctx.moveTo(-3,y);
+        ctx.lineTo(3,y);
+    }
+    ctx.stroke();
     ctx.textAlign="center";
-    ctx.fillText(dataX,width/2-margin,-10+3);
+    ctx.fillText(dataX,width/2-margin,-10+0);
     ctx.rotate(0.5*Math.PI);
-    ctx.fillText(dataY,width/2-margin,10+3);
+    ctx.fillText(dataY,width/2-margin,10+6);
     ctx.rotate(-0.5*Math.PI);
     ctx.translate(-margin,-margin);
 }
