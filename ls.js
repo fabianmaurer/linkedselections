@@ -3,6 +3,7 @@ let data = [];
 let mousex = 0;
 let mousey = 0;
 let dragging = false;
+let predragging=false;
 let numGraphs = 3;
 let nameToIndex = {};
 let indexToName = [];
@@ -14,6 +15,9 @@ let graphYPos=[];
 let countryIdMap={};
 let count=0;
 let asyncAddQueue=[];
+let history=[];
+let selectionchange=false;
+let svg=document.querySelector('svg');
 $('#choosedatabtn').focusout(function () {
     $('#choosedatabtn').removeClass('choosedataexpand');
     let h1 = $('#choosedatabtn').height() - 20;
@@ -60,7 +64,6 @@ function datasetChosen(i, tgt) {
     exp.setAttribute('id', 'dataoptionexpand');
     $(exp).css('position', 'absolute');
     $(exp).css('font-size', h / 40 * 13 + 'px');
-    console.log(h);
     $(exp).css('line-height', h + 'px');
     $(exp).css('width', w + 'px');
     $(exp).css(position);
@@ -121,7 +124,6 @@ function loading3() {
 function dissolveLoadingScreen() {
     $('#lseg2').css('background-color', 'blue');
     $('#loading-text').hide();
-    console.log('loading done');
     hideLoadingScreen();
 }
 
@@ -147,7 +149,6 @@ function graphView() {
 
 function loadData(url) {
     $.getJSON(url, function (json) {
-        console.log(json);
         data = json;
         sortData();
         buildGraphs();
@@ -212,6 +213,7 @@ function worldmapListeners() {
 
             
             toggleCountry(e.target.getAttribute('title'));
+            save();
         }, false);
         
         countryIdMap[a[i].getAttribute('title')]=a[i].getAttribute('id');
@@ -220,6 +222,7 @@ function worldmapListeners() {
 }
 
 function toggleCountry(name) {
+    selectionchange=true;
     count++;
     enabled[nameToIndex[name]] = !enabled[nameToIndex[name]];
     if(countryIdMap[name]!=null){
@@ -257,6 +260,7 @@ function buildGraphs() {
         $graphs.push($(c[i]));
         //drawScatterPlot('Human Development Index HDI-2014','Change mobile usage 2009 2014',ctx);
     }
+    createHistoryDOM();
     drawGraphs();
 }
 
@@ -281,7 +285,6 @@ function buildNamesMaps() {
         indexToName[i] = name;
         enabled[i] = false;
     }
-    console.log(nameToIndex);
     loadData('worldindexes.json');
 }
 
@@ -300,7 +303,6 @@ function sortData() {
 
 
 function drawScatterPlot(dataX, dataY, ctx, $graph,index) {
-    console.log('drawing');
     let maxX = 0, minX = 0, maxY = 0, minY = 0;
     let width = 300, height = 300, r = 3,margin=20;
     let first=true;
@@ -348,7 +350,6 @@ function drawScatterPlot(dataX, dataY, ctx, $graph,index) {
     let dx=maxX-minX;
     let dy=maxY-minY;
     let stepx=Math.pow(10,Math.round(Math.log10(dx))-1);
-    console.log(stepx);
     let stepy=Math.pow(10,Math.round(Math.log10(dy))-1);
     ctx.strokestyle='999';
     ctx.beginPath();
@@ -376,6 +377,84 @@ function drawScatterPlot(dataX, dataY, ctx, $graph,index) {
     ctx.translate(-margin,-margin);
 }
 
+function save(){
+    let obj={};
+    obj.enabled=enabled.slice();
+    history.push(obj);
+    getMapURI();
+    
+    setTimeout(updateHistoryDOM,100);
+}
+
+function createHistoryDOM(){
+    let history=document.createElement('div');
+    history.setAttribute('id','history');
+    $('#main').append(history);
+
+}
+
+function updateHistoryDOM(){
+    let hdata=history[history.length-1];
+    let helem=document.createElement('img');
+    let i=history.length-1;
+    helem.setAttribute('src',hdata.img);
+    helem.setAttribute('class','history-element');
+    $(helem).css({'left':history.length*50+'px'})
+    $(helem).click(function(event){
+        event.stopPropagation();
+        console.log(i);
+        load(history[i].enabled);
+    })
+    $('#history').append(helem);
+}
+
+function load(newEnabled){
+    console.log(newEnabled);
+    for(let i=0;i<enabled.length;i++){
+        if(enabled[i]!=newEnabled[i]){
+            toggleCountry(indexToName[i]);
+        }
+    }
+}
+
+function getMapURI(){
+    svg=$('#worldmap').children().first()[0];
+    var canvas = document.createElement('canvas');
+    canvas.width=700;
+    canvas.height=451;
+    var ctx = canvas.getContext('2d');
+    var data = (new XMLSerializer()).serializeToString(svg);
+    var DOMURL = window.URL || window.webkitURL || window;
+
+    var img = new Image();
+    var svgBlob = new Blob([data], {type: 'image/svg+xml;charset=utf-8'});
+    var url = DOMURL.createObjectURL(svgBlob);
+    img.src = url;
+    img.onload = function () {
+        ctx.drawImage(img, 0, 0);
+        DOMURL.revokeObjectURL(url);
+
+        var imgURI = canvas
+            .toDataURL('image/png');
+        history[history.length-1].img=imgURI;
+    };
+
+    
+}
+
+function triggerDownload (imgURI) {
+    var evt = new MouseEvent('click', {
+      view: window,
+      bubbles: false,
+      cancelable: true
+    });
+  
+    var a = document.createElement('a');
+    a.setAttribute('download', 'MY_COOL_IMAGE.png');
+    a.setAttribute('href', imgURI);
+    a.setAttribute('target', '_blank');
+    a.dispatchEvent(evt);
+}
 
 function enableDragging() {
     d = document.createElement('div');
@@ -383,25 +462,37 @@ function enableDragging() {
     $('#main').append(d);
     $(window).mousedown(function (e) {
         e.stopPropagation();
-        //console.log($e.contentDocument);
         mousex = e.clientX;
         mousey = e.clientY;
-        $('#dragbox').css('top', mousey + 'px');
-        $('#dragbox').css('bottom', $(window).height() - mousey + 'px');
-
-        $('#dragbox').css('left', mousex + 'px');
-        $('#dragbox').css('right', $(window).width() - mousex + 'px');
-        $('#dragbox').show();
-        dragging = true;
+        
+        predragging=true;
+        selectionchange=false;
     });
     $(window).mouseup(function (e) {
+        predragging=false;
+        
         if (dragging){
             $('#dragbox').hide();
             dragging=false;
+            if(selectionchange) save();
         }
     });
 
     $(window).mousemove(function (e) {
+        if(predragging){
+            if(Math.abs(e.clientX-mousex)+Math.abs(e.clientY-mousey)>3){
+
+                $('#dragbox').css('top', mousey + 'px');
+                $('#dragbox').css('bottom', $(window).height() - mousey + 'px');
+
+                $('#dragbox').css('left', mousex + 'px');
+                $('#dragbox').css('right', $(window).width() - mousex + 'px');
+                $('#dragbox').show();
+                predragging=false;
+                dragging=true;
+                
+            }
+        }
         if (dragging) {
             if (e.clientX < mousex) {
                 $('#dragbox').css('left', e.clientX + 'px');
@@ -443,7 +534,6 @@ function enableDragging() {
             for(let i=0;i<Math.max(flags1.length,flags2.length);i++){
                 if(flags2[i] && !flags1[i]){
                     toggleCountry(indexToName[i]);
-                    //console.log('oi');
                 }
             }
 

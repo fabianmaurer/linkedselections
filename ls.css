@@ -218,3 +218,15 @@ body{
     position:absolute;
     font-size:8px;
 }
+
+#history{
+    height:200px;
+    width:100%;
+    border-top:1px solid black;
+}
+
+.history-element{
+    height:116px;
+    width:180px;
+    border:1px solid black;
+}
