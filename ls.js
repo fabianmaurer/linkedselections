@@ -167,7 +167,9 @@ function initGraphView() {
     obj.setAttribute('type', 'image/svg+xml');
     obj.setAttribute('id', 'worldmap-object');
 
-
+    obj.addEventListener('load', function() {
+        worldMapLoaded();
+    }, true);
 
     //$e.replaceWith($($e[0].contentDocument.documentElement).clone());
     $(wm).append(obj);
@@ -194,7 +196,10 @@ function initGraphView() {
             }, false);
         }
     }, false);*/
-    setTimeout(inlineWorldmap, 200);
+}
+
+function worldMapLoaded(){
+    inlineWorldmap();
 }
 
 /**
