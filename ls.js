@@ -18,6 +18,20 @@ let asyncAddQueue=[];
 let history=[];
 let selectionchange=false;
 let svg=document.querySelector('svg');
+let countryDOMElements=[];
+
+let historyCount = 0;
+const historyRadius = 2;
+let historyPosition = 0;
+let historyTarget=0;
+let historyAnimation = false;
+let historyChanged=[];
+let historyMovement=0;
+let historyOffsetX=30;
+let historyOffsetY=30;
+let historyWidth=1000;
+
+
 $('#choosedatabtn').focusout(function () {
     $('#choosedatabtn').removeClass('choosedataexpand');
     let h1 = $('#choosedatabtn').height() - 20;
@@ -226,25 +240,26 @@ function worldmapListeners() {
     }
 }
 
-function toggleCountry(name) {
+function toggleCountry(index) {
     selectionchange=true;
     count++;
-    enabled[nameToIndex[name]] = !enabled[nameToIndex[name]];
-    if(countryIdMap[name]!=null){
-        $('#'+countryIdMap[name]).toggleClass('land-active').toggleClass('land');
+    enabled[index] = !enabled[index];
+    if(countryIdMap[indexToName[index]]!=null){
+        $('#'+countryIdMap[indexToName[index]]).toggleClass('land-active').toggleClass('land');
     }else{
-        console.log('id not found for: '+name)
+        console.log('id not found for: '+indexToName[index])
     
     }
-    asyncAddQueue.push(name);
+    asyncAddQueue.push(index);
     //$(".graph-circle."+countryIdMap[name]).toggleClass('enabled');
 }
 
 function asyncAdd(){
     for(let i=0;i<10;i++){
         if(asyncAddQueue.length>0){
-            name=asyncAddQueue.shift();
-            $(".graph-circle."+countryIdMap[name]).toggleClass('enabled');
+            index=asyncAddQueue.shift();
+            //$(".graph-circle."+countryIdMap[name]).toggleClass('enabled');
+            countryDOMElements[index].toggleClass('enabled');
             
         }
     }
@@ -279,6 +294,10 @@ function drawGraphs() {
         if(i==1) drawScatterPlot('Internet users percentage of population 2014', 'MaleSuicide Rate 100k people', contexts[i],$graphs[i],i);
         if(i==2) drawScatterPlot('Expected years of schooling - Years', 'Public expenditure on education Percentange GDP', contexts[i],$graphs[i],i);
     }
+    for(let i=0;i<indexToName.length;i++){
+        countryDOMElements[i]=$('.graph-circle.'+countryIdMap[indexToName[i]]);
+    }
+    console.log(countryDOMElements);
     asyncAdd();
 }
 
@@ -386,16 +405,15 @@ function save(){
     let obj={};
     obj.enabled=enabled.slice();
     history.push(obj);
-    getMapURI();
-    
-    setTimeout(updateHistoryDOM,100);
+    addHistoryEntry();
 }
 
 function createHistoryDOM(){
+    
     let history=document.createElement('div');
     history.setAttribute('id','history');
     $('#main').append(history);
-
+    initHistory();
 }
 
 function updateHistoryDOM(){
@@ -417,12 +435,12 @@ function load(newEnabled){
     console.log(newEnabled);
     for(let i=0;i<enabled.length;i++){
         if(enabled[i]!=newEnabled[i]){
-            toggleCountry(indexToName[i]);
+            toggleCountry(i);
         }
     }
 }
 
-function getMapURI(){
+function addHistoryEntry(){
     svg=$('#worldmap').children().first()[0];
     var canvas = document.createElement('canvas');
     canvas.width=700;
@@ -442,6 +460,7 @@ function getMapURI(){
         var imgURI = canvas
             .toDataURL('image/png');
         history[history.length-1].img=imgURI;
+        historyAddPanel();
     };
 
     
@@ -524,7 +543,7 @@ function enableDragging() {
                 for(let j=0;j<graphXPos[i].length;j++){
                     if((left<=graphXPos[i][j])&&(right>=graphXPos[i][j])&&(bottom<=graphYPos[i][j])&&(top>=graphYPos[i][j])){
                         if(!enabled[j]){
-                            toggleCountry(indexToName[j]);
+                            toggleCountry(j);
                         }
                         flags1[j]=true;
                     }else{
@@ -538,11 +557,127 @@ function enableDragging() {
             }
             for(let i=0;i<Math.max(flags1.length,flags2.length);i++){
                 if(flags2[i] && !flags1[i]){
-                    toggleCountry(indexToName[i]);
+                    toggleCountry(i);
                 }
             }
 
         }
 
     });
+}
+
+/**
+ * history functions
+ */
+
+function initHistory(){
+    historyLoadPanels();
+    historyInitPanels();
+    historyPanelLoop();
+    $('#history').bind('mousewheel', function (e) {
+        if (e.originalEvent.wheelDelta > 0) {
+            //right
+            if (historyTarget < historyCount-1) {
+                historyTarget++;
+                historyAnimation = true;
+            }
+        }
+        else {
+            //left        
+            if (historyTarget > 0) {
+                historyTarget--;
+                historyAnimation = true;
+            }
+        }
+    });
+}
+
+function historyLoadPanels() {
+    for (let i = 0; i < 0; i++) {
+        historyInitPanel(i);
+    }
+}
+
+function historyInitPanels(){
+    let ch=$('#history').children();
+    historyTarget=historyCount-1;
+    historyPosition=historyCount-1;
+    //console.log('changing:');
+    for(let i=0;i<historyCount;i++){
+        $(ch[i]).css('left',historyWidth*0+historyOffsetX+'px');
+    }
+    historyUpdateDOM();
+}
+
+function historyInitPanel(index) {
+    let panel = document.createElement('div');
+    panel.setAttribute('class', 'history-element');
+    $('#history').append(panel);
+    historyCount++;
+}
+
+function historyAddPanel() {
+    let hdata=history[history.length-1];
+    let panel=document.createElement('img');
+    let i=history.length-1;
+    panel.setAttribute('src',hdata.img);
+    panel.setAttribute('class','history-element');
+    $(panel).click(function(event){
+        event.stopPropagation();
+        load(history[i].enabled);
+    })
+    $('#history').append(panel);
+    historyCount++;
+    historyTarget++;
+    historyAnimation=true;
+}
+
+
+function historyPanelLoop() {
+    if (historyAnimation) {
+        historyUpdatePosition();
+        historyUpdateDOM();
+        
+    }
+    requestAnimationFrame(historyPanelLoop);
+}
+
+function historyUpdateDOM(){
+    let ch=$('#history').children();
+    for(let i=0;i<historyCount;i++){
+        let pos=(i-historyPosition+historyRadius)/(historyRadius*2);
+        let outside=(pos<-(1/historyRadius)) || (pos>1+1/historyRadius);
+        if(!outside){
+            if(pos<0) pos=0;
+            if(pos>1) pos=1;
+            $(ch[i]).css('left',historyWidth*historyPositionConverter(pos)+historyOffsetX+'px');
+        }
+    }
+}
+
+/**
+ * converts from 0..1 to 0..1 using some mathematical function to create smooth movement from linear movement.
+ */
+function historyPositionConverter(pos){
+    if(pos==0) return 0;
+    if(pos==1) return 1;
+    return pos;
+    if(pos>=0.5){
+        pos=1-pos;
+        let a=pos/0.1;
+        return 1-0.5*Math.pow(0.5,a);
+    }
+    if(pos<0.5){
+        let a=pos/0.1;
+        return 0.5*Math.pow(0.5,a);
+    }
+}
+
+function historyUpdatePosition() {
+    historyMovement=(historyTarget-historyPosition)/8;
+
+    if(Math.abs(historyTarget-historyPosition)<0.005){
+        historyPosition=historyTarget;
+        historyAnimation=false;
+    }else historyPosition+=historyMovement;
 }
