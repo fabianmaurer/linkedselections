@@ -29,7 +29,7 @@ let historyChanged=[];
 let historyMovement=0;
 let historyOffsetX=30;
 let historyOffsetY=30;
-let historyWidth=1000;
+
 
 
 $('#choosedatabtn').focusout(function () {
@@ -231,7 +231,7 @@ function worldmapListeners() {
         a[i].addEventListener("mousedown", function (e) {
 
             
-            toggleCountry(e.target.getAttribute('title'));
+            toggleCountry(nameToIndex[e.target.getAttribute('title')]);
             save();
         }, false);
         
@@ -413,6 +413,7 @@ function createHistoryDOM(){
     let history=document.createElement('div');
     history.setAttribute('id','history');
     $('#main').append(history);
+    
     initHistory();
 }
 
@@ -571,6 +572,8 @@ function enableDragging() {
  */
 
 function initHistory(){
+    historyWidth=$('#history').width()-historyOffsetX*2-180;
+    console.log('historywidth '+historyWidth);
     historyLoadPanels();
     historyInitPanels();
     historyPanelLoop();
@@ -628,7 +631,7 @@ function historyAddPanel() {
     })
     $('#history').append(panel);
     historyCount++;
-    historyTarget++;
+    historyTarget=historyCount-1;
     historyAnimation=true;
 }
 

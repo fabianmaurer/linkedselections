@@ -220,10 +220,11 @@ body{
 }
 
 #history{
-    height:200px;
+    height:178px;
     width:100%;
     border-top:1px solid black;
-    position:relative;
+    position:fixed;
+    bottom:0;
 }
 
 .history-element{
