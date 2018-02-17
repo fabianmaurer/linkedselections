@@ -280,7 +280,7 @@ function buildGraphs() {
         $graphs.push($(c[i]));
         //drawScatterPlot('Human Development Index HDI-2014','Change mobile usage 2009 2014',ctx);
     }
-    createHistoryDOM();
+    createMenus();
     drawGraphs();
 }
 
@@ -357,7 +357,7 @@ function drawScatterPlot(dataX, dataY, ctx, $graph,index) {
             let t=document.createElement('div');
             t.setAttribute('class','tooltip');
             t.innerHTML='tooltip';
-            c.append(t);
+            c.appendChild(t);
             $(c).css({'top':y+'px','left':x+'px'})
             $graph.append(c);
             graphXPos[index][i]=$graph.offset().left+x;
@@ -408,13 +408,41 @@ function save(){
     addHistoryEntry();
 }
 
-function createHistoryDOM(){
+function toggleMenu(type){
+    console.log('toggled '+type);
+}
+
+function createMenus(){
+    let buttonMenu=document.createElement('div');
+    buttonMenu.setAttribute('class','buttonmenu');
+    let types=['history','panels','social','options'];
+    let icons=['fas fa-history','far fa-chart-bar','fas fa-users','fas fa-cog'];
+
+    for(let i=0;i<types.length;i++){
+        let button=document.createElement('button');
+        button.setAttribute('class','iconbutton color-'+types[i]);
+        button.innerHTML='<i class="'+icons[i]+'"></i>'
+        $(button).click(function(){
+            toggleMenu(types[i]);
+        });
+        buttonMenu.appendChild(button);
+    }
     
+    $('#main').append(buttonMenu);
+    let menus=document.createElement('div');
+    menus.appendChild(createHistoryMenu());
+
+    $('#main').append(menus);
+    initHistory();
+}
+
+function createHistoryMenu(){
+    let overlay=document.createElement('div');
+    overlay.setAttribute('class','menuoverlay color-history');
     let history=document.createElement('div');
     history.setAttribute('id','history');
-    $('#main').append(history);
-    
-    initHistory();
+    overlay.appendChild(history);
+    return overlay;
 }
 
 function updateHistoryDOM(){
