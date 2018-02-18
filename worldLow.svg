@@ -17,13 +17,16 @@
 				fill: #40cc40;
 			}
 			.land-active{
-				fill: #4264cd;
+				fill: #5d9cec;
 				fill-opacity: 1;
-				stroke:white;
+				stroke:black;
 				stroke-opacity: 1;
 				stroke-width:0.5;
 				transition:all 0.2s ease;
 				cursor:pointer;
+			}
+			.land-active:hover{
+				fill:#4b91ea;
 			}
 		</style>
 		<amcharts:ammap projection="mercator" leftLongitude="-169.6" topLatitude="83.68" rightLongitude="190.25" bottomLatitude="-55.55"></amcharts:ammap>
