@@ -415,13 +415,20 @@ function save() {
 
 function toggleMenu(type) {
     console.log('toggled ' + type);
+    
+    if($('#menucontainer').is(':visible')){
+        $('#menucontainer').fadeOut(200);
+    }else{
+        $('#menucontainer').fadeIn(200);
+    }
+    /*
     $menu=$('#menu-'+type);
     if($menu.is(':visible')){
         $menu.fadeOut(200);
     }else{
         $menu.fadeIn(200);
     }
-    
+    */
 }
 
 function createMenus() {
@@ -442,6 +449,11 @@ function createMenus() {
 
     $('#main').append(buttonMenu);
     let menus = document.createElement('div');
+    menus.setAttribute('id','menucontainer');
+    let header=document.createElement('div');
+    header.setAttribute('class','overlay-header color-history');
+    header.innerHTML='History';
+    menus.appendChild(header);
     menus.appendChild(createHistoryMenu());
 
     $('#main').append(menus);
@@ -452,14 +464,35 @@ function createHistoryMenu() {
     let overlay = document.createElement('div');
     overlay.setAttribute('class', 'menuoverlay bordercolor-history');
     overlay.setAttribute('id','menu-history');
+    let content=document.createElement('div');
+    content.setAttribute('class','menucontent');
+    
+    
+
     let history = document.createElement('div');
     history.setAttribute('id', 'history');
+    content.appendChild(history);
+    overlay.appendChild(content);
+    return overlay;
+}
+
+function createPanelOverlay(){
+    let overlay = document.createElement('div');
+    overlay.setAttribute('class', 'menuoverlay bordercolor-history');
+    overlay.setAttribute('id','menu-history');
     let header=document.createElement('div');
-    header.setAttribute('class','overlay-header');
+    header.setAttribute('class','overlay-header color-panels');
     header.innerHTML='History';
     overlay.appendChild(header);
-    overlay.appendChild(history);
     return overlay;
+}
+
+function getAvailiablePanels(){
+
+}
+
+function generatePanels(){
+
 }
 
 function updateHistoryDOM() {
@@ -617,7 +650,8 @@ function enableDragging() {
  */
 
 function initHistory() {
-    historyWidth = $('#history').width() - historyOffsetX * 2 - 180;
+    historyWidth = $(document).width() - historyOffsetX * 2 - 360;
+    
     console.log('historywidth ' + historyWidth);
     historyLoadPanels();
     historyInitPanels();
@@ -694,11 +728,20 @@ function historyUpdateDOM() {
     let ch = $('#history').children();
     for (let i = 0; i < historyCount; i++) {
         let pos = (i - historyPosition + historyRadius) / (historyRadius * 2);
+        let size=1-Math.abs(pos-0.5);
         let outside = (pos < -(1 / historyRadius)) || (pos > 1 + 1 / historyRadius);
         if (!outside) {
-            if (pos < 0) pos = 0;
-            if (pos > 1) pos = 1;
-            $(ch[i]).css('left', historyWidth * historyPositionConverter(pos) + historyOffsetX + 'px');
+            if (pos < 0){
+                pos = 0;
+                size=0.5;
+            }
+            if (pos > 1){
+                pos = 1;
+                size=0.5;
+            }
+            $(ch[i]).css({'left':historyWidth * historyPositionConverter(pos) + historyOffsetX + 'px',
+                            'transform':'scale('+size+')',
+                            'z-index':Math.round(size*10)});
         }
     }
 }
@@ -709,15 +752,11 @@ function historyUpdateDOM() {
 function historyPositionConverter(pos) {
     if (pos == 0) return 0;
     if (pos == 1) return 1;
-    return pos;
     if (pos >= 0.5) {
-        pos = 1 - pos;
-        let a = pos / 0.1;
-        return 1 - 0.5 * Math.pow(0.5, a);
+        return 1-0.5*((pos-1)*2)*((pos-1)*2);
     }
     if (pos < 0.5) {
-        let a = pos / 0.1;
-        return 0.5 * Math.pow(0.5, a);
+        return 0.5*(pos*2)*(pos*2)
     }
 }
 

@@ -237,19 +237,21 @@ body{
 }
 
 #history{
+    position:absolute;
     height:178px;
     width:100%;
-    position:absolute;
-    bottom:0;
+    top:calc(50% - 160px);
 }
 
 .history-element{
-    height:116px;
-    width:180px;
-    border:1px solid black;
+    height:232px;
+    width:360px;
+    border:1px solid #999;
     top:30px;
     left:30px;
     position:absolute;
+    border-radius:8px;
+    background:rgba(0,0,0,0.5);
 }
 
 .buttonmenu{
@@ -320,20 +322,17 @@ body{
 }
 
 .menuoverlay{
-    display:none;
-    position:fixed;
-    top:20%;
-    height:60%;
-    left:5%;
-    width:90%;
-    z-index:1000;
-    background-color:rgba(0,0,0,0.8);
+    position:absolute;
+    height:calc(100% - 29px);
+    left:0;
+    width:100%;
+    
     overflow:hidden;
-    border-radius:8px;
+    /*border-radius:8px;*/
 }
 
 .bordercolor-history{
-    border:2px solid #ee3d3d;
+    border-color:#ee3d3d;
 }
 
 .bordercolor-panels{
@@ -351,7 +350,31 @@ body{
 .overlay-header{
     width:100%;
     text-align:center;
-    background:#f05050;
-    color:white;
+    border:none;
     font-size:24px;
+}
+
+.menucontent{
+    position:absolute;
+    width:100%;
+    height:100%;
+}
+
+.preview-panel{
+    width:300px;
+    height:300px;
+    border-radius:8px;
+    background:white;
+    border:1px solid #ccc;
+}
+
+#menucontainer{
+    display:none;
+    position:fixed;
+    background-color:rgba(0,0,0,0.8);
+    width:100%;
+    height:80%;
+    top:10%;
+    overflow:hidden;
+    z-index:1000;
 }
