@@ -20,7 +20,7 @@ let svg = document.querySelector('svg');
 let countryDOMElements = [];
 
 let historyCount = 0;
-const historyRadius = 2;
+const historyRadius = 3;
 let historyPosition = 0;
 let historyTarget = 0;
 let historyAnimation = false;
@@ -431,6 +431,10 @@ function toggleMenu(type) {
     */
 }
 
+function closeMenu(){
+    $('#menucontainer').fadeOut(200);
+}
+
 function createMenus() {
     let buttonMenu = document.createElement('div');
     buttonMenu.setAttribute('class', 'buttonmenu');
@@ -453,6 +457,13 @@ function createMenus() {
     let header=document.createElement('div');
     header.setAttribute('class','overlay-header color-history');
     header.innerHTML='History';
+    let closeButton=document.createElement('button');
+    closeButton.setAttribute('class','close-icon');
+    closeButton.innerHTML='<i class="fas fa-times"></i>';
+    $(closeButton).click(function(){
+        closeMenu();
+    })
+    header.appendChild(closeButton);
     menus.appendChild(header);
     menus.appendChild(createHistoryMenu());
 
