@@ -103,6 +103,7 @@ body{
     cursor:default;
     color:white;
     background-color:#40cc40;
+    z-index:1;
 }
 
 #loading-text{
@@ -145,8 +146,8 @@ body{
 
 #worldmap{
     background:lightcyan;
-    width:700px;
-    height:451px;
+    width:902px;
+    height:618px;
 }
 
 #worldmap-object{
@@ -156,18 +157,18 @@ body{
 
 
 #graph-container{
-    text-align:center;
+    text-align:left;
 }
 
 .graph{
     background-color:white;
     margin:8px;
-    display:inline-block;
     width:300px;
     height:300px;
     border:1px solid #ccc;
     position: relative;
     border-radius:8px;
+    float:left;
 }
 
 #wrapper{
@@ -246,17 +247,54 @@ body{
 .history-element{
     height:232px;
     width:360px;
-    border:1px solid #999;
+    
     top:30px;
     left:30px;
     position:absolute;
-    border-radius:8px;
+    
     background:rgba(0,0,0,0.5);
     cursor:pointer;
     transition:border-color 0.2s ease;
 }
 
-.history-element:hover{
+
+
+.history-image{
+    border:1px solid #999;
+    border-radius:8px;
+    height:100%;
+    width:100%;
+}
+
+.history-image:hover{
+    border-color:#24b145;
+}
+
+.history-previous{
+    height:116px;
+    width:180px;
+    position:absolute;
+    bottom:calc(100% + 50px);
+    left:90px;
+    text-align:center;
+    
+}
+
+.history-previous .fa-arrow-down{
+    color:white;
+    margin-top:16px;
+    cursor:default;
+}
+
+.history-previous-image{
+    height:100%;
+    width:100%;
+    border:1px solid #999;
+    border-radius:8px;
+    background:rgba(0,0,0,0.5);
+}
+
+.history-previous-image:hover{
     border-color:#24b145;
 }
 

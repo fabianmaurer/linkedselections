@@ -3,7 +3,7 @@ let mousex = 0;
 let mousey = 0;
 let dragging = false;
 let predragging = false;
-let numGraphs = 3;
+let numGraphs = 6;
 let nameToIndex = {};
 let indexToName = [];
 let enabled = [];
@@ -29,6 +29,15 @@ let historyMovement = 0;
 let historyOffsetX = 30;
 let historyOffsetY = 30;
 
+let availablePanels = [];
+let availableProperties = [];
+const numAvailableGraphs = 20;
+
+let activeGraphs = [];
+
+let historyInfo = [];
+
+let previousEntry = 0;
 
 
 $('#choosedatabtn').focusout(function () {
@@ -118,8 +127,8 @@ function loading() {
     loading1();
     setTimeout(loading2, 100);
     setTimeout(loading3, 200);
-
-    setTimeout(dissolveLoadingScreen, 240);
+    graphView();
+    setTimeout(dissolveLoadingScreen, 200);
 
 }
 
@@ -154,13 +163,13 @@ function hideLoadingScreen() {
         $('#dataoptionexpand').remove();
         $('#loadingtext').remove();
     })
-    graphView();
+
 }
 
 function graphView() {
     enableDragging();
     initGraphView();
-    setTimeout(buildNamesMaps, 300);
+    //setTimeout(buildNamesMaps, 300);
 
 }
 
@@ -191,11 +200,14 @@ function initGraphView() {
     //$e.replaceWith($($e[0].contentDocument.documentElement).clone());
     $(wm).append(obj);
     $(graphContainer).append(wm);
-    $(graphContainer).append('<br>')
+    for (let i = 0; i < numAvailableGraphs; i++) {
+        activeGraphs[i] = false;
+    }
     for (let i = 0; i < numGraphs; i++) {
         let g = document.createElement('div');
         g.setAttribute('class', 'graph');
         $(graphContainer).append(g);
+        activeGraphs[i] = true;
     }
     $('#main').append(graphContainer);
 
@@ -220,12 +232,23 @@ function worldMapLoaded() {
 }
 
 /**
- * Make the worldmap inline, so contents can be accessed. Timeout is required before calling this.
+ * Make the worldmap inline, so contents can be accessed from this js.
  */
 function inlineWorldmap() {
     let $e = $('#worldmap-object');
     $e.replaceWith($($e[0].contentDocument.documentElement).clone());
+    initZoom($('#worldmap').children()[0]);
     worldmapListeners();
+    buildNamesMaps();
+}
+
+function initZoom(svg) {
+    let zoom = svgPanZoom(svg, {
+        zoomScaleSensitivity: 0.5,
+        minZoom: 1,
+        maxZoom: 10,
+        dblClickZoomEnabled: false
+    });
 }
 
 function worldmapListeners() {
@@ -284,6 +307,7 @@ function buildGraphs() {
         //drawScatterPlot('Human Development Index HDI-2014','Change mobile usage 2009 2014',ctx);
     }
     createMenus();
+    generatePanels();
     drawGraphs();
 }
 
@@ -293,13 +317,19 @@ function drawGraphs() {
         graphXPos[i] = [];
         graphYPos[i] = [];
 
+        drawScatterPlot(availablePanels[i][0], availablePanels[i][1], contexts[i], $graphs[i], i);
+        /*
         if (i == 0) drawScatterPlot('Human Development Index HDI-2014', 'Change mobile usage 2009 2014', contexts[i], $graphs[i], i);
         if (i == 1) drawScatterPlot('Internet users percentage of population 2014', 'MaleSuicide Rate 100k people', contexts[i], $graphs[i], i);
         if (i == 2) drawScatterPlot('Expected years of schooling - Years', 'Public expenditure on education Percentange GDP', contexts[i], $graphs[i], i);
+        */
     }
     for (let i = 0; i < indexToName.length; i++) {
         countryDOMElements[i] = $('.graph-circle.' + countryIdMap[indexToName[i]]);
     }
+    $('#worldmap').children().first().mousedown(function (e) {
+        e.stopPropagation();
+    });
     asyncAdd();
 }
 
@@ -358,10 +388,10 @@ function drawScatterPlot(dataX, dataY, ctx, $graph, index) {
             c.setAttribute('class', 'graph-circle ' + countryIdMap[indexToName[i]]);
             let t = document.createElement('div');
             t.setAttribute('class', 'tooltip');
-            t.innerHTML = indexToName[i]+'<br>'+Math.round(cur[dataX]*100)/100+'<br>'+Math.round(cur[dataY]*100)/100;
+            t.innerHTML = indexToName[i] + '<br>' + Math.round(cur[dataX] * 100) / 100 + '<br>' + Math.round(cur[dataY] * 100) / 100;
             c.appendChild(t);
             $(c).css({ 'top': y + 'px', 'left': x + 'px' });
-            $(c).click(function(){
+            $(c).click(function () {
                 toggleCountry(i);
             })
             $graph.append(c);
@@ -388,7 +418,8 @@ function drawScatterPlot(dataX, dataY, ctx, $graph, index) {
         ctx.lineTo(x, 3);
         let txt = document.createElement('div');
         txt.setAttribute('class', 'axisnumber');
-        txt.innerHTML = Math.round((minX + i) * 100) / 100;
+        txt.innerHTML = numberToShort(minX + i);
+        //txt.innerHTML = Math.round((minX + i) * 100) / 100;
         $(txt).css({ 'top': '9px', 'left': 21 + x + 'px' })
         $graph.append(txt);
     }
@@ -396,7 +427,19 @@ function drawScatterPlot(dataX, dataY, ctx, $graph, index) {
         let y = i * (height - 40) / (dy);
         ctx.moveTo(-3, y);
         ctx.lineTo(3, y);
+        let txt = document.createElement('div');
+        txt.setAttribute('class', 'axisnumber');
+        txt.innerHTML = numberToShort(minY + i);
+        //txt.innerHTML = Math.round((minY + i) * 100) / 100;
+        $(txt).css({ 'top': 18 + y + 'px', 'right': '282px' })
+        $graph.append(txt);
     }
+    /*
+    for (let i = Math.ceil(minY / stepy) * stepy - minY; i <= dy; i = i + stepy) {
+        let y = i * (height - 40) / (dy);
+        ctx.moveTo(-3, y);
+        ctx.lineTo(3, y);
+    }*/
     ctx.stroke();
     ctx.textAlign = "center";
     ctx.fillText(dataX, width / 2 - margin, -10 + 0);
@@ -406,19 +449,41 @@ function drawScatterPlot(dataX, dataY, ctx, $graph, index) {
     ctx.translate(-margin, -margin);
 }
 
+function numberToShort(num) {
+    let digits = Math.log10(num);
+    if (digits > 1) {
+        num = Math.round(num);
+        if (digits < 3) return num;
+        if (digits < 6) return num / 1000 + 'K';
+        if (digits < 9) return num / 1000000 + 'M';
+        if (digits < 12) return num / 1000000000 + 'B';
+    }
+    return Math.round(num * 100) / 100;
+    let suffixes = ['', 'K', 'M', 'B', 'T'];
+    let suffix = suffixes[Math.floor(digits / 3)];
+    num = num / (Math.pow(10, Math.floor(digits / 3) * 3));
+    return num + suffix;
+}
+
 function save() {
     let obj = {};
     obj.enabled = enabled.slice();
+    console.log('prev:' + previousEntry + ' / ' + (history.length - 1));
+
+    if (previousEntry < history.length - 1) {
+        obj.previous = previousEntry;
+    }
+    previousEntry = history.length;
     history.push(obj);
     addHistoryEntry();
 }
 
 function toggleMenu(type) {
     console.log('toggled ' + type);
-    
-    if($('#menucontainer').is(':visible')){
+
+    if ($('#menucontainer').is(':visible')) {
         $('#menucontainer').fadeOut(200);
-    }else{
+    } else {
         $('#menucontainer').fadeIn(200);
     }
     /*
@@ -431,7 +496,7 @@ function toggleMenu(type) {
     */
 }
 
-function closeMenu(){
+function closeMenu() {
     $('#menucontainer').fadeOut(200);
 }
 
@@ -453,14 +518,14 @@ function createMenus() {
 
     $('#main').append(buttonMenu);
     let menus = document.createElement('div');
-    menus.setAttribute('id','menucontainer');
-    let header=document.createElement('div');
-    header.setAttribute('class','overlay-header color-history');
-    header.innerHTML='History';
-    let closeButton=document.createElement('button');
-    closeButton.setAttribute('class','close-icon');
-    closeButton.innerHTML='<i class="fas fa-times"></i>';
-    $(closeButton).click(function(){
+    menus.setAttribute('id', 'menucontainer');
+    let header = document.createElement('div');
+    header.setAttribute('class', 'overlay-header color-history');
+    header.innerHTML = 'History';
+    let closeButton = document.createElement('button');
+    closeButton.setAttribute('class', 'close-icon');
+    closeButton.innerHTML = '<i class="fas fa-times"></i>';
+    $(closeButton).click(function () {
         closeMenu();
     })
     header.appendChild(closeButton);
@@ -474,50 +539,59 @@ function createMenus() {
 function createHistoryMenu() {
     let overlay = document.createElement('div');
     overlay.setAttribute('class', 'menuoverlay bordercolor-history');
-    overlay.setAttribute('id','menu-history');
-    let content=document.createElement('div');
-    content.setAttribute('class','menucontent');
-    
-    
+    overlay.setAttribute('id', 'menu-history');
+    let content = document.createElement('div');
+    content.setAttribute('class', 'menucontent');
+
+
 
     let history = document.createElement('div');
     history.setAttribute('id', 'history');
     content.appendChild(history);
+    
+
     overlay.appendChild(content);
     return overlay;
 }
 
-function createPanelOverlay(){
+function createPanelOverlay() {
     let overlay = document.createElement('div');
     overlay.setAttribute('class', 'menuoverlay bordercolor-history');
-    overlay.setAttribute('id','menu-history');
-    let header=document.createElement('div');
-    header.setAttribute('class','overlay-header color-panels');
-    header.innerHTML='History';
+    overlay.setAttribute('id', 'menu-history');
+    let header = document.createElement('div');
+    header.setAttribute('class', 'overlay-header color-panels');
+    header.innerHTML = 'History';
     overlay.appendChild(header);
     return overlay;
 }
 
-function getAvailiablePanels(){
-
-}
-
-function generatePanels(){
-
+function generatePanels() {
+    availableProperties = Object.getOwnPropertyNames(data[1]);
+    // remove country id property
+    availableProperties.shift();
+    let r1 = 0, r2 = 0;
+    for (let i = 0; i < numAvailableGraphs; i++) {
+        r1 = Math.floor(Math.random() * availableProperties.length);
+        r2 = Math.floor(Math.random() * (availableProperties.length - 1));
+        if (r2 >= r1) r2++;
+        availablePanels.push([availableProperties[r1], availableProperties[r2]]);
+    }
 }
 
 function updateHistoryDOM() {
     let hdata = history[history.length - 1];
-    let helem = document.createElement('img');
+    let helem = document.createElement('div');
+    let himg = document.createElement('img');
     let i = history.length - 1;
-    helem.setAttribute('src', hdata.img);
+    himg.setAttribute('src', hdata.img);
     helem.setAttribute('class', 'history-element');
     $(helem).css({ 'left': history.length * 50 + 'px' })
-    $(helem).click(function (event) {
+    $(himg).click(function (event) {
         event.stopPropagation();
         console.log(i);
         load(history[i].enabled);
     })
+    helem.appendChild(himg);
     $('#history').append(helem);
 }
 
@@ -533,8 +607,8 @@ function load(newEnabled) {
 function addHistoryEntry() {
     svg = $('#worldmap').children().first()[0];
     var canvas = document.createElement('canvas');
-    canvas.width = 700;
-    canvas.height = 451;
+    canvas.width = 902;
+    canvas.height = 618;
     var ctx = canvas.getContext('2d');
     var data = (new XMLSerializer()).serializeToString(svg);
     var DOMURL = window.URL || window.webkitURL || window;
@@ -582,6 +656,7 @@ function enableDragging() {
         predragging = true;
         selectionchange = false;
     });
+
     $(window).mouseup(function (e) {
         predragging = false;
 
@@ -662,7 +737,7 @@ function enableDragging() {
 
 function initHistory() {
     historyWidth = $(document).width() - historyOffsetX * 2 - 360;
-    
+
     console.log('historywidth ' + historyWidth);
     historyLoadPanels();
     historyInitPanels();
@@ -711,14 +786,45 @@ function historyInitPanel(index) {
 
 function historyAddPanel() {
     let hdata = history[history.length - 1];
-    let panel = document.createElement('img');
+    let panel = document.createElement('div');
+    let himage = document.createElement('img');
     let i = history.length - 1;
-    panel.setAttribute('src', hdata.img);
+    himage.setAttribute('src', hdata.img);
+    himage.setAttribute('class', 'history-image');
+    if (hdata.previous) {
+        let $prev = $($('#history').children()[hdata.previous]).children().last().clone();
+        $prev.attr('class', 'history-previous-image');
+        $prev.css('left', '');
+        $prev.css('top', '');
+        $prev.click(function () {
+            historyTarget = hdata.previous;
+            historyAnimation = true;
+        });
+        $prev.hover(function () {
+            $($('#history').children()[hdata.previous]).animate({ top: '-70px' }, 200);
+        }, function () {
+            $($('#history').children()[hdata.previous]).animate({ top: '30px' }, 200);
+        })
+        let $prevContainer = $(document.createElement('div'));
+        $prevContainer.attr('class', 'history-previous');
+        $prevContainer.append($prev);
+        $prevContainer.append('<i class="fa fa-arrow-down"></i>')
+        panel.appendChild($prevContainer[0]);
+
+    }
+
+    if (hdata.note) {
+
+    }
+
     panel.setAttribute('class', 'history-element');
-    $(panel).click(function (event) {
+    $(himage).click(function (event) {
         event.stopPropagation();
         load(history[i].enabled);
+        previousEntry = i;
+        console.log('loaded no ' + previousEntry);
     })
+    panel.appendChild(himage);
     $('#history').append(panel);
     historyCount++;
     historyTarget = historyCount - 1;
@@ -739,22 +845,30 @@ function historyUpdateDOM() {
     let ch = $('#history').children();
     for (let i = 0; i < historyCount; i++) {
         let pos = (i - historyPosition + historyRadius) / (historyRadius * 2);
-        let size=1-Math.abs(pos-0.5);
+        let size = 1 - Math.abs(pos - 0.5);
         let outside = (pos < -(1 / historyRadius)) || (pos > 1 + 1 / historyRadius);
         if (!outside) {
-            if (pos < 0){
+            if (pos < 0) {
                 pos = 0;
-                size=0.5;
+                size = 0.5;
             }
-            if (pos > 1){
+            if (pos > 1) {
                 pos = 1;
-                size=0.5;
+                size = 0.5;
             }
-            $(ch[i]).css({'left':historyWidth * historyPositionConverter(pos) + historyOffsetX + 'px',
-                            'transform':'scale('+size+')',
-                            'z-index':Math.round(size*10)});
+            $(ch[i]).css({
+                'left': historyWidth * historyPositionConverter(pos) + historyOffsetX + 'px',
+                'transform': 'scale(' + size + ')',
+                'z-index': Math.round(size * 10)
+            });
+            if ($(ch[i]).children().length > 1) {
+                let opacity = 1 - 2 * Math.abs(historyPositionConverter(pos) - 0.5);
+                $(ch[i]).children().first().css('opacity', opacity);
+            }
+
         }
     }
+
 }
 
 /**
@@ -764,10 +878,10 @@ function historyPositionConverter(pos) {
     if (pos == 0) return 0;
     if (pos == 1) return 1;
     if (pos >= 0.5) {
-        return 1-0.5*((pos-1)*2)*((pos-1)*2);
+        return 1 - 0.5 * ((pos - 1) * 2) * ((pos - 1) * 2);
     }
     if (pos < 0.5) {
-        return 0.5*(pos*2)*(pos*2)
+        return 0.5 * (pos * 2) * (pos * 2)
     }
 }
 
