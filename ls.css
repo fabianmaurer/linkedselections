@@ -251,7 +251,7 @@ body{
     top:30px;
     left:30px;
     position:absolute;
-    
+    border-radius: 8px;
     background:rgba(0,0,0,0.5);
     cursor:pointer;
     transition:border-color 0.2s ease;
@@ -268,6 +268,14 @@ body{
 
 .history-image:hover{
     border-color:#24b145;
+}
+
+.history-image:hover + .history-buttonbar{
+    opacity:1;
+}
+
+.history-image.important{
+    border:1px solid #f05050;
 }
 
 .history-previous{
@@ -296,6 +304,11 @@ body{
 
 .history-previous-image:hover{
     border-color:#24b145;
+}
+
+.history-info{
+    position:absolute;
+    top:calc(100% + 20%);
 }
 
 .buttonmenu{
@@ -437,4 +450,92 @@ body{
 }
 .close-icon:hover{
     opacity:1;
+}
+
+
+
+.history-buttonbar{
+    position:absolute;
+    top:0;
+    right:0;
+    border-radius:0 8px 0 0;
+    overflow:hidden;
+    opacity:0;
+}
+
+.history-buttonbar:hover{
+    opacity:1;
+}
+
+.history-buttonbar button{
+    float:right;
+    background:transparent;
+    border:none;
+    color:rgba(255,255,255,0.5);
+    width:30px;
+    height:30px;
+    transition:color 0.2s ease;
+    padding:0;
+    cursor:pointer;
+    font-size:16px;
+}
+
+.history-important-button.important{
+    color:#ee3d3d;
+}
+
+.history-important-button:hover{
+    color:#ee3d3d;
+}
+
+.history-comment-button:hover{
+    color:#1aacda;
+}
+
+.history-note{
+    position:absolute;
+    top:100%;
+    left:0;
+    color:rgba(255,255,255,0.7);
+    margin:10px;
+    width:calc(100% - 40px);
+    cursor:default;
+}
+
+.history-note textarea{
+    width:100%;
+    background:rgba(0,0,0,0.5);
+    color:white;
+    resize:none;
+    font-family:Calibri;
+    font-size:16px;
+    border:none;
+    margin:-2px 0 0 -2px;
+}
+
+.history-note:hover > .top-right-edit-button{
+    opacity:1;
+}
+
+.history-note textarea:focus + .top-right-edit-button{
+    opacity:1;
+    color:white;
+}
+
+.top-right-edit-button{
+    position: absolute;
+    top:-4px;
+    left:100%;
+    background:none;
+    border:none;
+    font-size:12px;
+    cursor:pointer;
+    opacity:0;
+    padding:8px;
+    color:rgba(255,255,255,0.5);
+    transition:color 0.2s ease;
+}
+
+.top-right-edit-button:hover{
+    color:white;
 }

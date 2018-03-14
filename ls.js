@@ -548,7 +548,7 @@ function createHistoryMenu() {
     let history = document.createElement('div');
     history.setAttribute('id', 'history');
     content.appendChild(history);
-    
+
 
     overlay.appendChild(content);
     return overlay;
@@ -624,6 +624,7 @@ function addHistoryEntry() {
         var imgURI = canvas
             .toDataURL('image/png');
         history[history.length - 1].img = imgURI;
+        history[history.length - 1].important = false;
         historyAddPanel();
     };
 
@@ -813,9 +814,44 @@ function historyAddPanel() {
 
     }
 
-    if (hdata.note) {
+    let note = document.createElement('div');
+    note.setAttribute('class', 'history-note');
 
-    }
+    let noteText = document.createElement('div');
+    noteText.innerHTML = hdata.note || '';
+
+    let noteEdit = document.createElement('button');
+    noteEdit.setAttribute('class', 'top-right-edit-button');
+    noteEdit.innerHTML = '<i class="fas fa-pencil-alt"></i>';
+    $(noteEdit).click(function () {
+        let textarea = $(this).prev('div').html();
+        let edittext = $('<textarea spellcheck="false" />');
+        edittext.val(textarea);
+        $(this).prev('div').replaceWith(edittext);
+        edittext.focus();
+        edittext.blur(function () {
+            let html = $(this).val();
+            hdata.note=html;
+            let viewtext = $("<div>");
+            viewtext.html(html);
+            $(this).replaceWith(viewtext);
+        })
+
+        edittext.keypress(function (e) {
+            if (e.which == 13) {
+                let html = $(this).val();
+                hdata.note=html;
+                let viewtext = $("<div>");
+                viewtext.html(html);
+                $(this).replaceWith(viewtext);
+            }
+        });
+
+    })
+
+    note.appendChild(noteText);
+    note.appendChild(noteEdit);
+    panel.appendChild(note);
 
     panel.setAttribute('class', 'history-element');
     $(himage).click(function (event) {
@@ -825,6 +861,32 @@ function historyAddPanel() {
         console.log('loaded no ' + previousEntry);
     })
     panel.appendChild(himage);
+
+    let buttonbar = document.createElement('div');
+    buttonbar.setAttribute('class', 'history-buttonbar');
+
+    let importantButton = document.createElement('button');
+    importantButton.setAttribute('class', 'history-important-button');
+    importantButton.innerHTML = '<i class="fas fa-exclamation"></i>';
+    $(importantButton).click(function () {
+        $(himage).toggleClass('important');
+        $(importantButton).toggleClass('important');
+        hdata.important=true;
+    });
+
+
+    let commentButton = document.createElement('button');
+    commentButton.setAttribute('class', 'history-comment-button');
+    commentButton.innerHTML = '<i class="fas fa-comment"></i>'
+    $(commentButton).click(function () {
+        $(noteEdit).click();
+    })
+
+    buttonbar.appendChild(importantButton);
+    buttonbar.appendChild(commentButton);
+
+    panel.appendChild(buttonbar);
+
     $('#history').append(panel);
     historyCount++;
     historyTarget = historyCount - 1;
@@ -863,7 +925,7 @@ function historyUpdateDOM() {
             });
             if ($(ch[i]).children().length > 1) {
                 let opacity = 1 - 2 * Math.abs(historyPositionConverter(pos) - 0.5);
-                $(ch[i]).children().first().css('opacity', opacity);
+                $(ch[i]).find('.history-previous, .history-note').css('opacity', opacity);
             }
 
         }
