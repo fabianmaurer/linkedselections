@@ -380,11 +380,12 @@ body{
 
 .menuoverlay{
     position:absolute;
+    white-space: nowrap;
     height:calc(100% - 29px);
     left:0;
     width:100%;
     
-    overflow:hidden;
+    overflow-y:visible;
     /*border-radius:8px;*/
 }
 
@@ -409,20 +410,48 @@ body{
     text-align:center;
     border:none;
     font-size:24px;
+    text-transform:capitalize;
+    transition:all 0.5s ease;
 }
 
 .menucontent{
-    position:absolute;
+    
     width:100%;
     height:100%;
+    display:none;
+}
+
+.menucontent.panels{
+    overflow-y:auto;
+    overflow-x:hidden;
+    white-space: normal;
+}
+
+
+.menucontent.visible{
+    display:inline-block;
 }
 
 .preview-panel{
-    width:300px;
-    height:300px;
+    width:200px;
+    height:200px;
+    margin:18px;
     border-radius:8px;
-    background:white;
+    background-color:white;
     border:1px solid #ccc;
+    float:left;
+}
+
+.preview-panel:hover{
+    background-color:#aaeeba;
+}
+
+.preview-panel.active{
+    background-color:#26be4a;
+}
+
+.preview-panel.active:hover{
+    background-color:#26be4a;
 }
 
 #menucontainer{
@@ -438,7 +467,7 @@ body{
 
 .close-icon{
     position:absolute;
-    top:0;
+    bottom:100%;
     right:0;
     height:29px;
     margin-right:5px;
@@ -538,4 +567,15 @@ body{
 
 .top-right-edit-button:hover{
     color:white;
+}
+
+.options-container{
+    float:left;
+    width:100%;
+    text-align: center;
+}
+
+.option-box{
+    display:block;
+    color:rgba(255,255,255,0.8);
 }

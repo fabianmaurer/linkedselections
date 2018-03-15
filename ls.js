@@ -39,6 +39,8 @@ let historyInfo = [];
 
 let previousEntry = 0;
 
+let menuNames = ['history', 'panels', 'social', 'options'];
+
 
 $('#choosedatabtn').focusout(function () {
     /*
@@ -306,8 +308,9 @@ function buildGraphs() {
         $graphs.push($(c[i]));
         //drawScatterPlot('Human Development Index HDI-2014','Change mobile usage 2009 2014',ctx);
     }
-    createMenus();
+    
     generatePanels();
+    createMenus();
     drawGraphs();
 }
 
@@ -331,6 +334,10 @@ function drawGraphs() {
         e.stopPropagation();
     });
     asyncAdd();
+}
+
+function toggleGraph(){
+
 }
 
 function buildNamesMaps() {
@@ -480,11 +487,33 @@ function save() {
 
 function toggleMenu(type) {
     console.log('toggled ' + type);
+    let $content=$('.menucontent.'+type);
 
-    if ($('#menucontainer').is(':visible')) {
+    if($content.hasClass('visible')){
+        $content.removeClass('visible');
         $('#menucontainer').fadeOut(200);
-    } else {
-        $('#menucontainer').fadeIn(200);
+    }else{
+        $('.overlay-header').html(type);
+        $('.overlay-header').attr('class','overlay-header color-'+type);
+        if ($('#menucontainer').is(':visible')){
+            let $old=$('.menucontent.visible');
+            $content.addClass('visible');
+            if($content.index()>$old.index()){
+                $old.animate({'margin-left':'-100%'},500,function(){
+                    $old.removeClass('visible');
+                    $old.css('margin-left','');
+                })
+            }else{
+                $content.css('margin-left','-100%');
+                $content.animate({'margin-left':'0'},500,function(){
+                    $old.removeClass('visible');
+                    $content.css('margin-left','');
+                })
+            }
+        }else{
+            $('#menucontainer').fadeIn(200);
+            $content.addClass('visible');
+        }
     }
     /*
     $menu=$('#menu-'+type);
@@ -503,15 +532,15 @@ function closeMenu() {
 function createMenus() {
     let buttonMenu = document.createElement('div');
     buttonMenu.setAttribute('class', 'buttonmenu');
-    let types = ['history', 'panels', 'social', 'options'];
+    
     let icons = ['fas fa-history', 'far fa-chart-bar', 'fas fa-users', 'fas fa-cog'];
 
-    for (let i = 0; i < types.length; i++) {
+    for (let i = 0; i < menuNames.length; i++) {
         let button = document.createElement('button');
-        button.setAttribute('class', 'iconbutton color-' + types[i]);
+        button.setAttribute('class', 'iconbutton color-' + menuNames[i]);
         button.innerHTML = '<i class="' + icons[i] + '"></i>'
         $(button).click(function () {
-            toggleMenu(types[i]);
+            toggleMenu(menuNames[i]);
         });
         buttonMenu.appendChild(button);
     }
@@ -522,36 +551,106 @@ function createMenus() {
     let header = document.createElement('div');
     header.setAttribute('class', 'overlay-header color-history');
     header.innerHTML = 'History';
+    
+    menus.appendChild(header);
+    let overlay = document.createElement('div');
+    overlay.setAttribute('class', 'menuoverlay');
+    menus.append(overlay);
+
     let closeButton = document.createElement('button');
     closeButton.setAttribute('class', 'close-icon');
     closeButton.innerHTML = '<i class="fas fa-times"></i>';
     $(closeButton).click(function () {
         closeMenu();
     })
-    header.appendChild(closeButton);
-    menus.appendChild(header);
-    menus.appendChild(createHistoryMenu());
+    overlay.appendChild(closeButton);
+
+    overlay.appendChild(createHistoryMenu());
+    overlay.appendChild(createPanelMenu());
+    overlay.appendChild(createSocialMenu());
+    overlay.appendChild(createOptionsMenu());
+    
 
     $('#main').append(menus);
     initHistory();
 }
 
 function createHistoryMenu() {
-    let overlay = document.createElement('div');
-    overlay.setAttribute('class', 'menuoverlay bordercolor-history');
-    overlay.setAttribute('id', 'menu-history');
+    
     let content = document.createElement('div');
-    content.setAttribute('class', 'menucontent');
-
-
+    content.setAttribute('class', 'menucontent history');
 
     let history = document.createElement('div');
     history.setAttribute('id', 'history');
     content.appendChild(history);
 
+    return content;
+}
 
-    overlay.appendChild(content);
-    return overlay;
+function createPanelMenu(){
+    let content = document.createElement('div');
+    content.setAttribute('class', 'menucontent panels');
+
+    let panels = document.createElement('div');
+    //history.setAttribute('id', 'history');
+
+    for(let i=0;i<availablePanels.length;i++){
+        let panel=document.createElement('div');
+        
+        if(activeGraphs[i]){
+            panel.setAttribute('class','preview-panel active');
+        }else{
+            panel.setAttribute('class','preview-panel');
+        }
+
+        $(panel).click(function(){
+            $(panel).toggleClass('active');
+            activeGraphs[i]=!activeGraphs[i];
+            toggleGraph(i);
+            console.log('a');
+        })
+
+        panel.innerHTML=availablePanels[i][0]+' / '+availablePanels[i][1];
+        panels.appendChild(panel);
+    }
+
+    content.appendChild(panels);
+
+    return content;
+}
+
+function createSocialMenu(){
+    let content = document.createElement('div');
+    content.setAttribute('class', 'menucontent social');
+    content.innerHTML='Social Menu';
+    return content;
+}
+
+function createOptionsMenu(){
+    let content = document.createElement('div');
+    content.setAttribute('class', 'menucontent options');
+    
+    let options=document.createElement('div');
+    options.setAttribute('class','options-container');
+    for(let i=0;i<5;i++){
+        let option=document.createElement('div');
+        option.setAttribute('class','option-box');
+        let checkbox=document.createElement('input');
+        checkbox.setAttribute('id','option'+i);
+        checkbox.setAttribute('type','checkbox');
+        checkbox.setAttribute('name','option '+i)
+        let txt=document.createElement('label');
+        txt.setAttribute('for','option'+i);
+        txt.innerHTML='option '+i;
+        option.appendChild(checkbox);
+        option.appendChild(txt);
+        options.appendChild(option);
+    }
+
+    content.appendChild(options);
+
+    return content;
+
 }
 
 function createPanelOverlay() {
