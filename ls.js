@@ -495,8 +495,8 @@ function toggleMenu(type) {
     }else{
         $('.overlay-header').html(type);
         $('.overlay-header').attr('class','overlay-header color-'+type);
+        let $old=$('.menucontent.visible');
         if ($('#menucontainer').is(':visible')){
-            let $old=$('.menucontent.visible');
             $content.addClass('visible');
             if($content.index()>$old.index()){
                 $old.animate({'margin-left':'-100%'},500,function(){
@@ -513,6 +513,7 @@ function toggleMenu(type) {
         }else{
             $('#menucontainer').fadeIn(200);
             $content.addClass('visible');
+            $old.removeClass('visible');
         }
     }
     /*
