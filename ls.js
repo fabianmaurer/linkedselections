@@ -11,6 +11,8 @@ let contexts = [];
 let $graphs = [];
 let graphXPos = [];
 let graphYPos = [];
+let graphXPosLocal= [];
+let graphYPosLocal=[];
 let countryIdMap = {};
 let count = 0;
 let asyncAddQueue = [];
@@ -207,7 +209,7 @@ function initGraphView() {
     }
     for (let i = 0; i < numGraphs; i++) {
         let g = document.createElement('div');
-        g.setAttribute('class', 'graph');
+        g.setAttribute('class', 'graph panel'+i);
         $(graphContainer).append(g);
         activeGraphs[i] = true;
     }
@@ -297,15 +299,18 @@ function asyncAdd() {
 
 function buildGraphs() {
     let c = $('.graph');
-    for (let i = 1; i < c.length; i++) {
-
-        let can = document.createElement('canvas');
-        can.setAttribute('width', $(c[i]).width());
-        can.setAttribute('height', $(c[i]).height());
-        $(c[i]).append(can);
-        let ctx = can.getContext('2d');
-        contexts.push(ctx);
-        $graphs.push($(c[i]));
+    c.splice(0,1);
+    for (let i = 0; i < activeGraphs.length; i++) {
+        if(activeGraphs[i]){
+            let can = document.createElement('canvas');
+            can.setAttribute('width', $(c[i]).width());
+            can.setAttribute('height', $(c[i]).height());
+            $(c[i]).append(can);
+            let ctx = can.getContext('2d');
+            contexts[i]=ctx;
+            $graphs[i]=$(c[i]);
+        }
+        
         //drawScatterPlot('Human Development Index HDI-2014','Change mobile usage 2009 2014',ctx);
     }
     
@@ -316,11 +321,20 @@ function buildGraphs() {
 
 function drawGraphs() {
     let c = $('.graph');
-    for (let i = 0; i < contexts.length; i++) {
-        graphXPos[i] = [];
-        graphYPos[i] = [];
 
-        drawScatterPlot(availablePanels[i][0], availablePanels[i][1], contexts[i], $graphs[i], i);
+    for (let i = 0; i < activeGraphs.length; i++) {
+        
+        graphXPosLocal[i] = [];
+        graphYPosLocal[i] = [];
+
+        if(activeGraphs[i]){
+            console.log(i);
+            graphXPos[i]=$graphs[i].offset().left;
+            graphYPos[i]=$graphs[i].offset().top;
+            drawScatterPlot(availablePanels[i][0], availablePanels[i][1], contexts[i], $graphs[i], i);
+        }
+
+        
         /*
         if (i == 0) drawScatterPlot('Human Development Index HDI-2014', 'Change mobile usage 2009 2014', contexts[i], $graphs[i], i);
         if (i == 1) drawScatterPlot('Internet users percentage of population 2014', 'MaleSuicide Rate 100k people', contexts[i], $graphs[i], i);
@@ -336,7 +350,40 @@ function drawGraphs() {
     asyncAdd();
 }
 
-function toggleGraph(){
+function addGraph(index){
+    let g = document.createElement('div');
+    g.setAttribute('class', 'graph panel'+index);
+    $('#graph-container').append(g);
+    let can = document.createElement('canvas');
+    can.setAttribute('width', $(g).width());
+    can.setAttribute('height', $(g).height());
+    $(g).append(can);
+    let ctx = can.getContext('2d');
+    
+    drawScatterPlot(availablePanels[index][0], availablePanels[index][1], ctx, $(g), index);
+    refreshGraphPositions();
+
+    
+}
+
+function removeGraph(index){
+    $('.panel'+index).remove();
+    refreshGraphPositions();
+}
+
+function refreshGraphPositions(){
+    for(let i=0;i<activeGraphs.length;i++){
+        if(activeGraphs[i]){
+            console.log(i);
+            graphXPos[i]=$('.panel'+i).offset().left;
+            graphYPos[i]=$('.panel'+i).offset().top;         
+        }
+        
+    }
+    console.log(graphXPos);
+    for (let i = 0; i < indexToName.length; i++) {
+        countryDOMElements[i] = $('.graph-circle.' + countryIdMap[indexToName[i]]);
+    }
 
 }
 
@@ -402,8 +449,8 @@ function drawScatterPlot(dataX, dataY, ctx, $graph, index) {
                 toggleCountry(i);
             })
             $graph.append(c);
-            graphXPos[index][i] = $graph.offset().left + x;
-            graphYPos[index][i] = $graph.offset().top + y;
+            graphXPosLocal[index][i] = x;
+            graphYPosLocal[index][i] = y;
         }
     }
     ctx.beginPath();
@@ -607,7 +654,11 @@ function createPanelMenu(){
         $(panel).click(function(){
             $(panel).toggleClass('active');
             activeGraphs[i]=!activeGraphs[i];
-            toggleGraph(i);
+            if(activeGraphs[i]){
+                addGraph(i);
+            }else{
+                removeGraph(i);
+            }
             console.log('a');
         })
 
@@ -804,10 +855,10 @@ function enableDragging() {
             let top = Math.max(e.clientY, mousey);
             let flags1 = [];
             let flags2 = [];
-            for (let i = 0; i < graphXPos.length; i++) {
+            for (let i = 0; i < graphXPosLocal.length; i++) {
 
-                for (let j = 0; j < graphXPos[i].length; j++) {
-                    if ((left <= graphXPos[i][j]) && (right >= graphXPos[i][j]) && (bottom <= graphYPos[i][j]) && (top >= graphYPos[i][j])) {
+                for (let j = 0; j < graphXPosLocal[i].length; j++) {
+                    if ((left <= graphXPos[i]+graphXPosLocal[i][j]) && (right >= graphXPos[i]+graphXPosLocal[i][j]) && (bottom <= graphYPos[i]+graphYPosLocal[i][j]) && (top >= graphYPos[i]+graphYPosLocal[i][j])) {
                         if (!enabled[j]) {
                             toggleCountry(j);
                         }
