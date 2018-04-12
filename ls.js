@@ -7,12 +7,13 @@ let numGraphs = 6;
 let nameToIndex = {};
 let indexToName = [];
 let enabled = [];
+let oldEnabled = [];
 let contexts = [];
 let $graphs = [];
 let graphXPos = [];
 let graphYPos = [];
-let graphXPosLocal= [];
-let graphYPosLocal=[];
+let graphXPosLocal = [];
+let graphYPosLocal = [];
 let countryIdMap = {};
 let count = 0;
 let asyncAddQueue = [];
@@ -30,6 +31,9 @@ let historyChanged = [];
 let historyMovement = 0;
 let historyOffsetX = 30;
 let historyOffsetY = 30;
+let selector = 0;
+const selectors = ['box', 'resizebox', 'line', 'remove', 'clear'];
+
 
 let availablePanels = [];
 let availableProperties = [];
@@ -41,8 +45,27 @@ let historyInfo = [];
 
 let previousEntry = 0;
 
+let currentUser = "";
+
 let menuNames = ['history', 'panels', 'social', 'options'];
 
+const serviceURL = "http://localhost:8080/history";
+
+let vBoxDrag = false;
+let hBoxDrag = false;
+let $dragTarget = null;
+
+let currentColor = 'blue';
+let shiftMode = false;
+
+let boxSelectors = [];
+let currentBoxSelectorIndex = 0;
+let currentBoxSelector = null;
+let boxSelectorId = 0;
+let mouseEnabled = [];
+let waiting = 0;
+let menuMode = 'detached';
+let showTimer = 0;
 
 $('#choosedatabtn').focusout(function () {
     /*
@@ -70,6 +93,8 @@ $('#choosedatabtn').click(function (e) {
             d.setAttribute('class', 'dataoption');
             d.innerHTML = 'dataset ' + i;
             $(d).click(function (e) {
+                currentUser = $('#username').val();
+                $('#username').remove();
                 datasetChosen(i, e.currentTarget);
             });
             $(c).append(d);
@@ -87,6 +112,7 @@ $('#choosedatabtn').click(function (e) {
 
 
 function datasetChosen(i, tgt) {
+
     let position = $(tgt).offset();
     let w = $(tgt).width() * 1.5;
     let h = $(tgt).height() * 1.5;
@@ -186,6 +212,7 @@ function loadData(url) {
 }
 
 function initGraphView() {
+    createSelectorButtons();
     let graphContainer = document.createElement('div');
     graphContainer.setAttribute('id', 'graph-container');
 
@@ -193,7 +220,7 @@ function initGraphView() {
     wm.setAttribute('class', 'graph');
     wm.setAttribute('id', 'worldmap');
     let obj = document.createElement('object');
-    obj.setAttribute('data', 'worldLow.svg');
+    obj.setAttribute('data', 'worldLow.svg?version=8');
     obj.setAttribute('type', 'image/svg+xml');
     obj.setAttribute('id', 'worldmap-object');
 
@@ -209,7 +236,7 @@ function initGraphView() {
     }
     for (let i = 0; i < numGraphs; i++) {
         let g = document.createElement('div');
-        g.setAttribute('class', 'graph panel'+i);
+        g.setAttribute('class', 'graph panel' + i);
         $(graphContainer).append(g);
         activeGraphs[i] = true;
     }
@@ -280,42 +307,52 @@ function toggleCountry(index) {
         console.log('id not found for: ' + indexToName[index])
 
     }
+    //countryDOMElements[index].addClass('enabled');
     asyncAddQueue.push(index);
     //$(".graph-circle."+countryIdMap[name]).toggleClass('enabled');
 }
 
 function asyncAdd() {
-    for (let i = 0; i < 10; i++) {
-        if (asyncAddQueue.length > 0) {
-            index = asyncAddQueue.shift();
-            //$(".graph-circle."+countryIdMap[name]).toggleClass('enabled');
-            countryDOMElements[index].toggleClass('enabled');
+    if (asyncAddQueue.length == 0) {
+        waiting = 0;
+    } else if (waiting < 1) {
+        waiting++;
+    } else {
+        waiting = 0;
+        for (let i = 0; i < 30; i++) {
+            if (asyncAddQueue.length > 0) {
+                index = asyncAddQueue.shift();
+                //$(".graph-circle."+countryIdMap[name]).toggleClass('enabled');
+                countryDOMElements[index].toggleClass('enabled');
 
+            }
         }
     }
+
 
     requestAnimationFrame(asyncAdd);
 }
 
 function buildGraphs() {
     let c = $('.graph');
-    c.splice(0,1);
+    c.splice(0, 1);
     for (let i = 0; i < activeGraphs.length; i++) {
-        if(activeGraphs[i]){
+        if (activeGraphs[i]) {
             let can = document.createElement('canvas');
             can.setAttribute('width', $(c[i]).width());
             can.setAttribute('height', $(c[i]).height());
             $(c[i]).append(can);
             let ctx = can.getContext('2d');
-            contexts[i]=ctx;
-            $graphs[i]=$(c[i]);
+            contexts[i] = ctx;
+            $graphs[i] = $(c[i]);
         }
-        
+
         //drawScatterPlot('Human Development Index HDI-2014','Change mobile usage 2009 2014',ctx);
     }
-    
+
     generatePanels();
     createMenus();
+    toggleMenuMode();
     drawGraphs();
 }
 
@@ -323,18 +360,17 @@ function drawGraphs() {
     let c = $('.graph');
 
     for (let i = 0; i < activeGraphs.length; i++) {
-        
+
         graphXPosLocal[i] = [];
         graphYPosLocal[i] = [];
 
-        if(activeGraphs[i]){
-            console.log(i);
-            graphXPos[i]=$graphs[i].offset().left;
-            graphYPos[i]=$graphs[i].offset().top;
+        if (activeGraphs[i]) {
+            graphXPos[i] = $graphs[i].offset().left;
+            graphYPos[i] = $graphs[i].offset().top;
             drawScatterPlot(availablePanels[i][0], availablePanels[i][1], contexts[i], $graphs[i], i);
         }
 
-        
+
         /*
         if (i == 0) drawScatterPlot('Human Development Index HDI-2014', 'Change mobile usage 2009 2014', contexts[i], $graphs[i], i);
         if (i == 1) drawScatterPlot('Internet users percentage of population 2014', 'MaleSuicide Rate 100k people', contexts[i], $graphs[i], i);
@@ -350,37 +386,35 @@ function drawGraphs() {
     asyncAdd();
 }
 
-function addGraph(index){
+function addGraph(index) {
     let g = document.createElement('div');
-    g.setAttribute('class', 'graph panel'+index);
+    g.setAttribute('class', 'graph panel' + index);
     $('#graph-container').append(g);
     let can = document.createElement('canvas');
     can.setAttribute('width', $(g).width());
     can.setAttribute('height', $(g).height());
     $(g).append(can);
     let ctx = can.getContext('2d');
-    
+
     drawScatterPlot(availablePanels[index][0], availablePanels[index][1], ctx, $(g), index);
     refreshGraphPositions();
 
-    
+
 }
 
-function removeGraph(index){
-    $('.panel'+index).remove();
+function removeGraph(index) {
+    $('.panel' + index).remove();
     refreshGraphPositions();
 }
 
-function refreshGraphPositions(){
-    for(let i=0;i<activeGraphs.length;i++){
-        if(activeGraphs[i]){
-            console.log(i);
-            graphXPos[i]=$('.panel'+i).offset().left;
-            graphYPos[i]=$('.panel'+i).offset().top;         
+function refreshGraphPositions() {
+    for (let i = 0; i < activeGraphs.length; i++) {
+        if (activeGraphs[i]) {
+            graphXPos[i] = $('.panel' + i).offset().left;
+            graphYPos[i] = $('.panel' + i).offset().top;
         }
-        
+
     }
-    console.log(graphXPos);
     for (let i = 0; i < indexToName.length; i++) {
         countryDOMElements[i] = $('.graph-circle.' + countryIdMap[indexToName[i]]);
     }
@@ -446,7 +480,10 @@ function drawScatterPlot(dataX, dataY, ctx, $graph, index) {
             c.appendChild(t);
             $(c).css({ 'top': y + 'px', 'left': x + 'px' });
             $(c).click(function () {
-                toggleCountry(i);
+                if (selector == 2) {
+                    mouseEnabled[i] = !mouseEnabled[i];
+                    toggleCountry(i);
+                }
             })
             $graph.append(c);
             graphXPosLocal[index][i] = x;
@@ -528,37 +565,84 @@ function save() {
         obj.previous = previousEntry;
     }
     previousEntry = history.length;
+    obj.timestamp = Date.now();
+    obj.boxSelectors = boxSelectors.slice();
+    obj.mouseEnabled = mouseEnabled;
     history.push(obj);
-    addHistoryEntry();
+    saveHistoryEntry(obj);
+    addHistoryEntry(history.length - 1);
+}
+
+function toggleMenuMode() {
+    if (menuMode == 'attached') {
+        menuMode = 'detached';
+        $('#menucontainer').css('bottom', '');
+        $('#menucontainer').css('top', '');
+        $('#menucontainer').css('height', '');
+        $('.buttonmenu-bottom-right').css('bottom', '');
+        $('.buttonmenu-bottom-left').css('bottom', '');
+    }
+    if (menuMode == 'detached') {
+        let dist = $(window).height() - $('#worldmap').height() - 60;
+        menuMode = 'attached';
+        $('#menucontainer').css('bottom', -1 * dist + 'px');
+        $('#menucontainer').css('top', 'auto');
+        $('#menucontainer').css('height', dist + 'px');
+        if ($('#menucontainer').is(':visible')) {
+            $('.buttonmenu-bottom-right').css('bottom', dist + 'px');
+            $('.buttonmenu-bottom-left').css('bottom', dist + 'px');
+        }
+    }
 }
 
 function toggleMenu(type) {
     console.log('toggled ' + type);
-    let $content=$('.menucontent.'+type);
+    let $content = $('.menucontent.' + type);
 
-    if($content.hasClass('visible')){
+    if ($content.hasClass('visible')) {
         $content.removeClass('visible');
-        $('#menucontainer').fadeOut(200);
-    }else{
+        if (menuMode == "detached") {
+            $('#menucontainer').fadeOut(200);
+        }
+        if (menuMode == "attached") {
+            let dist = -($(window).height() - $('#worldmap').height() - 60) + 'px';
+            $('#menucontainer').animate({ 'bottom': dist }, 200, function () {
+                $('#menucontainer').css('display', 'none');
+            });
+            $('.buttonmenu-bottom-right').animate({ 'bottom': 0 }, 200);
+            $('.buttonmenu-bottom-left').animate({ 'bottom': 0 }, 200);
+        }
+
+    } else {
+
         $('.overlay-header').html(type);
-        $('.overlay-header').attr('class','overlay-header color-'+type);
-        let $old=$('.menucontent.visible');
-        if ($('#menucontainer').is(':visible')){
+        $('.overlay-header').attr('class', 'overlay-header color-' + type);
+        let $old = $('.menucontent.visible');
+        if ($('#menucontainer').is(':visible')) {
             $content.addClass('visible');
-            if($content.index()>$old.index()){
-                $old.animate({'margin-left':'-100%'},500,function(){
+            if ($content.index() > $old.index()) {
+                $old.animate({ 'margin-left': '-100%' }, 500, function () {
                     $old.removeClass('visible');
-                    $old.css('margin-left','');
+                    $old.css('margin-left', '');
                 })
-            }else{
-                $content.css('margin-left','-100%');
-                $content.animate({'margin-left':'0'},500,function(){
+            } else {
+                $content.css('margin-left', '-100%');
+                $content.animate({ 'margin-left': '0' }, 500, function () {
                     $old.removeClass('visible');
-                    $content.css('margin-left','');
+                    $content.css('margin-left', '');
                 })
             }
-        }else{
-            $('#menucontainer').fadeIn(200);
+        } else {
+            if (menuMode == "detached") {
+                $('#menucontainer').fadeIn(200);
+            }
+            if (menuMode == "attached") {
+                let dist = $(window).height() - $('#worldmap').height() - 60 + 'px';
+                $('#menucontainer').css('display', 'block');
+                $('#menucontainer').animate({ 'bottom': 0 }, 200);
+                $('.buttonmenu-bottom-right').animate({ 'bottom': dist }, 200);
+                $('.buttonmenu-bottom-left').animate({ 'bottom': dist }, 200);
+            }
             $content.addClass('visible');
             $old.removeClass('visible');
         }
@@ -579,8 +663,8 @@ function closeMenu() {
 
 function createMenus() {
     let buttonMenu = document.createElement('div');
-    buttonMenu.setAttribute('class', 'buttonmenu');
-    
+    buttonMenu.setAttribute('class', 'buttonmenu-bottom-right');
+
     let icons = ['fas fa-history', 'far fa-chart-bar', 'fas fa-users', 'fas fa-cog'];
 
     for (let i = 0; i < menuNames.length; i++) {
@@ -593,13 +677,14 @@ function createMenus() {
         buttonMenu.appendChild(button);
     }
 
+
     $('#main').append(buttonMenu);
     let menus = document.createElement('div');
     menus.setAttribute('id', 'menucontainer');
     let header = document.createElement('div');
     header.setAttribute('class', 'overlay-header color-history');
     header.innerHTML = 'History';
-    
+
     menus.appendChild(header);
     let overlay = document.createElement('div');
     overlay.setAttribute('class', 'menuoverlay');
@@ -617,14 +702,14 @@ function createMenus() {
     overlay.appendChild(createPanelMenu());
     overlay.appendChild(createSocialMenu());
     overlay.appendChild(createOptionsMenu());
-    
+
 
     $('#main').append(menus);
     initHistory();
 }
 
 function createHistoryMenu() {
-    
+
     let content = document.createElement('div');
     content.setAttribute('class', 'menucontent history');
 
@@ -635,34 +720,34 @@ function createHistoryMenu() {
     return content;
 }
 
-function createPanelMenu(){
+function createPanelMenu() {
     let content = document.createElement('div');
     content.setAttribute('class', 'menucontent panels');
 
     let panels = document.createElement('div');
     //history.setAttribute('id', 'history');
 
-    for(let i=0;i<availablePanels.length;i++){
-        let panel=document.createElement('div');
-        
-        if(activeGraphs[i]){
-            panel.setAttribute('class','preview-panel active');
-        }else{
-            panel.setAttribute('class','preview-panel');
+    for (let i = 0; i < availablePanels.length; i++) {
+        let panel = document.createElement('div');
+
+        if (activeGraphs[i]) {
+            panel.setAttribute('class', 'preview-panel active');
+        } else {
+            panel.setAttribute('class', 'preview-panel');
         }
 
-        $(panel).click(function(){
+        $(panel).click(function () {
             $(panel).toggleClass('active');
-            activeGraphs[i]=!activeGraphs[i];
-            if(activeGraphs[i]){
+            activeGraphs[i] = !activeGraphs[i];
+            if (activeGraphs[i]) {
                 addGraph(i);
-            }else{
+            } else {
                 removeGraph(i);
             }
             console.log('a');
         })
 
-        panel.innerHTML=availablePanels[i][0]+' / '+availablePanels[i][1];
+        panel.innerHTML = availablePanels[i][0] + ' / ' + availablePanels[i][1];
         panels.appendChild(panel);
     }
 
@@ -671,29 +756,30 @@ function createPanelMenu(){
     return content;
 }
 
-function createSocialMenu(){
+function createSocialMenu() {
     let content = document.createElement('div');
     content.setAttribute('class', 'menucontent social');
-    content.innerHTML='Social Menu';
+    content.innerHTML = 'Social Menu';
     return content;
 }
 
-function createOptionsMenu(){
+function createOptionsMenu() {
     let content = document.createElement('div');
     content.setAttribute('class', 'menucontent options');
-    
-    let options=document.createElement('div');
-    options.setAttribute('class','options-container');
-    for(let i=0;i<5;i++){
-        let option=document.createElement('div');
-        option.setAttribute('class','option-box');
-        let checkbox=document.createElement('input');
-        checkbox.setAttribute('id','option'+i);
-        checkbox.setAttribute('type','checkbox');
-        checkbox.setAttribute('name','option '+i)
-        let txt=document.createElement('label');
-        txt.setAttribute('for','option'+i);
-        txt.innerHTML='option '+i;
+
+    let options = document.createElement('div');
+    options.setAttribute('class', 'options-container');
+
+    for (let i = 0; i < 5; i++) {
+        let option = document.createElement('div');
+        option.setAttribute('class', 'option-box');
+        let checkbox = document.createElement('input');
+        checkbox.setAttribute('id', 'option' + i);
+        checkbox.setAttribute('type', 'checkbox');
+        checkbox.setAttribute('name', 'option ' + i)
+        let txt = document.createElement('label');
+        txt.setAttribute('for', 'option' + i);
+        txt.innerHTML = 'option ' + i;
         option.appendChild(checkbox);
         option.appendChild(txt);
         options.appendChild(option);
@@ -722,8 +808,10 @@ function generatePanels() {
     availableProperties.shift();
     let r1 = 0, r2 = 0;
     for (let i = 0; i < numAvailableGraphs; i++) {
-        r1 = Math.floor(Math.random() * availableProperties.length);
-        r2 = Math.floor(Math.random() * (availableProperties.length - 1));
+        // r1 = Math.floor(Math.random() * availableProperties.length);
+        // r2 = Math.floor(Math.random() * (availableProperties.length - 1));
+        r1 = i;
+        r2 = availableProperties.length - i - 2;
         if (r2 >= r1) r2++;
         availablePanels.push([availableProperties[r1], availableProperties[r2]]);
     }
@@ -739,15 +827,17 @@ function updateHistoryDOM() {
     $(helem).css({ 'left': history.length * 50 + 'px' })
     $(himg).click(function (event) {
         event.stopPropagation();
-        console.log(i);
-        load(history[i].enabled);
+        load(history[i].enabled, history[i].mouseEnabled, history[i].boxSelectors);
     })
     helem.appendChild(himg);
     $('#history').append(helem);
 }
 
-function load(newEnabled) {
-    console.log(newEnabled);
+function load(newEnabled, mouseEnabled_, boxSelectors_) {
+    mouseEnabled = mouseEnabled_;
+    boxSelectors = boxSelectors_;
+
+    loadBoxSelectors();
     for (let i = 0; i < enabled.length; i++) {
         if (enabled[i] != newEnabled[i]) {
             toggleCountry(i);
@@ -755,7 +845,122 @@ function load(newEnabled) {
     }
 }
 
-function addHistoryEntry() {
+function loadBoxSelectors() {
+    $('.boxselector').remove();
+    for (let i = 0; i < boxSelectors.length; i++) {
+        let b = boxSelectors[i];
+        let $dbox = $('#dragbox');
+        let $box = $(document.createElement('div'));
+        $box.attr('class', 'boxselector');
+        $box.css('border-color', currentColor);
+        $box.css({
+            'bottom': $(window).height() - b.top + 'px',
+            'top': b.bottom + 'px',
+            'left': b.left + 'px',
+            'right': $(window).width() - b.right + 'px'
+        })
+        let v1 = document.createElement('div');
+        let v2 = document.createElement('div');
+        let h1 = document.createElement('div');
+        let h2 = document.createElement('div');
+        v1.setAttribute('class', 'v1');
+        v2.setAttribute('class', 'v2');
+        h1.setAttribute('class', 'h1');
+        h2.setAttribute('class', 'h2');
+        $(v1).css({
+            'top': $box.css('top'),
+            'bottom': $box.css('bottom'),
+            'left': $box.css('left')
+        });
+        $(v2).css({
+            'top': $box.css('top'),
+            'bottom': $box.css('bottom'),
+            'left': parseInt($box.css('left')) + $dbox.width() + 'px'
+        })
+        $(h1).css({
+            'top': $box.css('top'),
+            'left': $box.css('left'),
+            'right': $box.css('right')
+        })
+        $(h2).css({
+            'top': parseInt($box.css('top')) + $dbox.height() + 'px',
+            'left': $box.css('left'),
+            'right': $box.css('right')
+        })
+        $box.append(v1, v2, h1, h2);
+        $('#dragbox').hide();
+        dragging = false;
+        $('#main').append($box);
+        let id = i;
+        if (selectionchange) save();
+        $(v1).mousedown(function (e) {
+            if (selector == 3) {
+                let s = boxSelectors[id];
+                boxSelectors[id] = null;
+                boxCollisionCheck(s.left, s.right, s.top, s.bottom, true);
+                $box.remove();
+            } else {
+                boxSelectorId = id;
+                currentBoxSelectorIndex = id;
+                currentBoxSelector = $box;
+                vBoxDrag = true;
+                e.stopPropagation();
+                $dragTarget = $box;
+                $dragLine = $(v1);
+            }
+        });
+        $(v2).mousedown(function (e) {
+            if (selector == 3) {
+                let s = boxSelectors[id];
+                boxSelectors[id] = null;
+                boxCollisionCheck(s.left, s.right, s.top, s.bottom, true);
+                $box.remove();
+            } else {
+                boxSelectorId = id;
+                currentBoxSelectorIndex = id;
+                currentBoxSelector = $box;
+                vBoxDrag = true;
+                e.stopPropagation();
+                $dragTarget = $box;
+                $dragLine = $(v2);
+            }
+        });
+        $(h1).mousedown(function (e) {
+            if (selector == 3) {
+                let s = boxSelectors[id];
+                boxSelectors[id] = null;
+                boxCollisionCheck(s.left, s.right, s.top, s.bottom, true);
+                $box.remove();
+            } else {
+                boxSelectorId = id;
+                currentBoxSelectorIndex = id;
+                currentBoxSelector = $box;
+                hBoxDrag = true;
+                e.stopPropagation();
+                $dragTarget = $box;
+                $dragLine = $(h1);
+            }
+        });
+        $(h2).mousedown(function (e) {
+            if (selector == 3) {
+                let s = boxSelectors[id];
+                boxSelectors[id] = null;
+                boxCollisionCheck(s.left, s.right, s.top, s.bottom, true);
+                $box.remove();
+            } else {
+                boxSelectorId = id;
+                currentBoxSelectorIndex = id;
+                currentBoxSelector = $box;
+                hBoxDrag = true;
+                e.stopPropagation();
+                $dragTarget = $box;
+                $dragLine = $(h2);
+            }
+        });
+    }
+}
+
+function addHistoryEntry(index) {
     svg = $('#worldmap').children().first()[0];
     var canvas = document.createElement('canvas');
     canvas.width = 902;
@@ -774,27 +979,117 @@ function addHistoryEntry() {
 
         var imgURI = canvas
             .toDataURL('image/png');
-        history[history.length - 1].img = imgURI;
-        history[history.length - 1].important = false;
-        historyAddPanel();
+        history[index].img = imgURI;
+        history[index].important = false;
+        historyAddPanel(index);
     };
 
 
 }
 
-function triggerDownload(imgURI) {
-    var evt = new MouseEvent('click', {
-        view: window,
-        bubbles: false,
-        cancelable: true
-    });
-
-    var a = document.createElement('a');
-    a.setAttribute('download', 'MY_COOL_IMAGE.png');
-    a.setAttribute('href', imgURI);
-    a.setAttribute('target', '_blank');
-    a.dispatchEvent(evt);
+function empty() {
+    boxSelectors = [];
+    mouseEnabled = [];
+    $('.boxselector').remove();
+    boxCollisionCheck(0, 0, 0, 0, false);
 }
+
+function boxCollisionCheck(left_, right_, top_, bottom_, inverted) {
+    let flags1 = [];
+    let flags2 = [];
+    let left = 0, right = 0, top = 0, bottom = 0;
+    for (let i = 0; i < graphXPosLocal.length; i++) {
+        for (let j = 0; j < graphXPosLocal[i].length; j++) {
+            for (let k = 0; k < boxSelectors.length + 1; k++) {
+                if (k == 0) {
+                    left = left_;
+                    right = right_;
+                    top = top_;
+                    bottom = bottom_;
+                } else {
+                    if (boxSelectors[k - 1] == null) continue;
+                    if ((hBoxDrag || vBoxDrag) && (k - 1 == currentBoxSelectorIndex)) {
+                        continue;
+                    } else {
+                        left = boxSelectors[k - 1].left;
+                        right = boxSelectors[k - 1].right;
+                        top = boxSelectors[k - 1].top;
+                        bottom = boxSelectors[k - 1].bottom;
+                    }
+
+                }
+                if ((left <= graphXPos[i] + graphXPosLocal[i][j]) && (right >= graphXPos[i] + graphXPosLocal[i][j]) && (bottom <= graphYPos[i] + graphYPosLocal[i][j]) && (top >= graphYPos[i] + graphYPosLocal[i][j])) {
+                    // if (!enabled[j]) {
+                    //     toggleCountry(j);
+                    // }
+                    if (inverted && k == 0) {
+                        flags2[j] = true;
+                    } else {
+                        flags1[j] = true;
+                        if (!enabled[j] && k > 0) {
+                            flags1[j] = false;
+                        }
+                    }
+
+                } else {
+                    flags2[j] = true;
+
+
+                }
+
+            }
+
+        }
+    }
+    for (let i = 0; i < enabled.length; i++) {
+        if (flags1[i] && !enabled[i]) {
+            toggleCountry(i);
+        } else if (flags2[i] && enabled[i] && !flags1[i] && !mouseEnabled[i]) {
+            toggleCountry(i);
+        }
+    }
+
+}
+function addToMouseEnabled(left_, right_, top_, bottom_) {
+    
+    let flags1 = [];
+    let flags2 = [];
+    let left = 0, right = 0, top = 0, bottom = 0;
+    for (let i = 0; i < graphXPosLocal.length; i++) {
+        for (let j = 0; j < graphXPosLocal[i].length; j++) {
+            for (let k = 0; k < 1; k++) {
+                if (k == 0) {
+                    left = left_;
+                    right = right_;
+                    top = bottom_;
+                    bottom = top_;
+                } else {
+                    if (boxSelectors[k - 1] == null) continue;
+                    if ((hBoxDrag || vBoxDrag) && (k - 1 == currentBoxSelectorIndex)) {
+                        continue;
+                    } else {
+                        left = boxSelectors[k - 1].left;
+                        right = boxSelectors[k - 1].right;
+                        top = boxSelectors[k - 1].top;
+                        bottom = boxSelectors[k - 1].bottom;
+                    }
+
+                }
+                if ((left <= graphXPos[i] + graphXPosLocal[i][j]) && (right >= graphXPos[i] + graphXPosLocal[i][j]) && (bottom <= graphYPos[i] + graphYPosLocal[i][j]) && (top >= graphYPos[i] + graphYPosLocal[i][j])) {
+                    flags1[j] = true;
+                }
+            }
+
+        }
+    }
+    for (let i = 0; i < enabled.length; i++) {
+        if (flags1[i]) {
+            mouseEnabled[i] = true;
+        }
+    }
+
+}
+
 
 function enableDragging() {
     d = document.createElement('div');
@@ -804,22 +1099,200 @@ function enableDragging() {
         e.stopPropagation();
         mousex = e.clientX;
         mousey = e.clientY;
-
-        predragging = true;
-        selectionchange = false;
+        if (selector < 2) {
+            predragging = true;
+            selectionchange = false;
+        }
     });
 
     $(window).mouseup(function (e) {
         predragging = false;
+        if (vBoxDrag || hBoxDrag) {
+            if (selectionchange) save();
+        }
+        vBoxDrag = false;
+        hBoxDrag = false;
 
         if (dragging) {
-            $('#dragbox').hide();
-            dragging = false;
-            if (selectionchange) save();
+            if (selector == 0) {
+                if (e.clientX < mousex) {
+                    $('#dragbox').css('left', e.clientX + 'px');
+                    $('#dragbox').css('right', $(window).width() - mousex + 'px');
+                } else {
+                    $('#dragbox').css('left', mousex + 'px');
+                    $('#dragbox').css('right', $(window).width() - e.clientX + 'px');
+                }
+                if (e.clientY < mousey) {
+                    $('#dragbox').css('top', e.clientY + 'px');
+                    $('#dragbox').css('bottom', $(window).height() - mousey + 'px');
+                } else {
+                    $('#dragbox').css('top', mousey + 'px');
+                    $('#dragbox').css('bottom', $(window).height() - e.clientY + 'px');
+                }
+                let left = Math.min(e.clientX, mousex);
+                let right = Math.max(e.clientX, mousex);
+                let bottom = Math.min(e.clientY, mousey);
+                let top = Math.max(e.clientY, mousey);
+                addToMouseEnabled(left, right, bottom, top);
+                $('#dragbox').hide();
+                dragging = false;
+                if (selectionchange) save();
+            } else if (selector == 1) {
+                let $dbox = $('#dragbox');
+                let $box = $('#dragbox').clone();
+                $box.removeAttr('id');
+                $box.attr('class', 'boxselector');
+                $box.css('border-color', currentColor);
+                let v1 = document.createElement('div');
+                let v2 = document.createElement('div');
+                let h1 = document.createElement('div');
+                let h2 = document.createElement('div');
+                v1.setAttribute('class', 'v1');
+                v2.setAttribute('class', 'v2');
+                h1.setAttribute('class', 'h1');
+                h2.setAttribute('class', 'h2');
+                $(v1).css({
+                    'top': $dbox.css('top'),
+                    'bottom': $dbox.css('bottom'),
+                    'left': $dbox.css('left')
+                });
+                $(v2).css({
+                    'top': $dbox.css('top'),
+                    'bottom': $dbox.css('bottom'),
+                    'left': parseInt($dbox.css('left')) + $dbox.width() + 'px'
+                })
+                $(h1).css({
+                    'top': $dbox.css('top'),
+                    'left': $dbox.css('left'),
+                    'right': $dbox.css('right')
+                })
+                $(h2).css({
+                    'top': parseInt($dbox.css('top')) + $dbox.height() + 'px',
+                    'left': $dbox.css('left'),
+                    'right': $dbox.css('right')
+                })
+                $box.append(v1, v2, h1, h2);
+                $('#dragbox').hide();
+                dragging = false;
+                $('#main').append($box);
+                let id = boxSelectors.length;
+                boxSelectors.push({
+                    top: $(window).height() - parseInt($box.css('bottom')),
+                    right: $(window).width() - parseInt($box.css('right')),
+                    bottom: parseInt($box.css('top')),
+                    left: parseInt($box.css('left'))
+                });
+                if (selectionchange) save();
+                $(v1).mousedown(function (e) {
+                    if (selector == 3) {
+                        let s = boxSelectors[id];
+                        boxSelectors[id] = null;
+                        boxCollisionCheck(s.left, s.right, s.top, s.bottom, true);
+                        $box.remove();
+                    } else {
+                        boxSelectorId = id;
+                        currentBoxSelectorIndex = id;
+                        currentBoxSelector = $box;
+                        vBoxDrag = true;
+                        e.stopPropagation();
+                        $dragTarget = $box;
+                        $dragLine = $(v1);
+                    }
+                });
+                $(v2).mousedown(function (e) {
+                    if (selector == 3) {
+                        let s = boxSelectors[id];
+                        boxSelectors[id] = null;
+                        boxCollisionCheck(s.left, s.right, s.top, s.bottom, true);
+                        $box.remove();
+                    } else {
+                        boxSelectorId = id;
+                        currentBoxSelectorIndex = id;
+                        currentBoxSelector = $box;
+                        vBoxDrag = true;
+                        e.stopPropagation();
+                        $dragTarget = $box;
+                        $dragLine = $(v2);
+                    }
+                });
+                $(h1).mousedown(function (e) {
+                    if (selector == 3) {
+                        let s = boxSelectors[id];
+                        boxSelectors[id] = null;
+                        boxCollisionCheck(s.left, s.right, s.top, s.bottom, true);
+                        $box.remove();
+                    } else {
+                        boxSelectorId = id;
+                        currentBoxSelectorIndex = id;
+                        currentBoxSelector = $box;
+                        hBoxDrag = true;
+                        e.stopPropagation();
+                        $dragTarget = $box;
+                        $dragLine = $(h1);
+                    }
+                });
+                $(h2).mousedown(function (e) {
+                    if (selector == 3) {
+                        let s = boxSelectors[id];
+                        boxSelectors[id] = null;
+                        boxCollisionCheck(s.left, s.right, s.top, s.bottom, true);
+                        $box.remove();
+                    } else {
+                        boxSelectorId = id;
+                        currentBoxSelectorIndex = id;
+                        currentBoxSelector = $box;
+                        hBoxDrag = true;
+                        e.stopPropagation();
+                        $dragTarget = $box;
+                        $dragLine = $(h2);
+                    }
+                });
+            }
+            oldEnabled = enabled;
+
         }
     });
 
     $(window).mousemove(function (e) {
+        if (vBoxDrag || hBoxDrag) {
+            let v1 = $dragTarget.find('.v1');
+            let v2 = $dragTarget.find('.v2');
+            let h1 = $dragTarget.find('.h1');
+            let h2 = $dragTarget.find('.h2');
+            if (vBoxDrag) {
+                $dragLine.css('left', e.clientX);
+                h1.css({
+                    'left': v1.css('left'),
+                    'right': $(window).width() - parseInt(v2.css('left'))
+                });
+                h2.css({
+                    'left': v1.css('left'),
+                    'right': $(window).width() - parseInt(v2.css('left'))
+                });
+            } else if (hBoxDrag) {
+                $dragLine.css('top', e.clientY);
+                v1.css({
+                    'top': h1.css('top'),
+                    'bottom': $(window).height() - parseInt(h2.css('top'))
+                });
+                v2.css({
+                    'top': h1.css('top'),
+                    'bottom': $(window).height() - parseInt(h2.css('top'))
+                });
+            }
+            $dragTarget.css({
+                'top': $dragTarget.find('.v1').css('top'),
+                'right': $dragTarget.find('.h1').css('right'),
+                'bottom': $dragTarget.find('.v1').css('bottom'),
+                'left': $dragTarget.find('.h1').css('left')
+            });
+            let left = parseInt($dragTarget.css('left'));
+            let right = $(window).width() - parseInt($dragTarget.css('right'));
+            let top = $(window).height() - parseInt($dragTarget.css('bottom'));
+            let bottom = parseInt($dragTarget.css('top'));
+            boxCollisionCheck(left, right, top, bottom, false);
+
+        }
         if (predragging) {
             if (Math.abs(e.clientX - mousex) + Math.abs(e.clientY - mousey) > 3) {
 
@@ -853,30 +1326,7 @@ function enableDragging() {
             let right = Math.max(e.clientX, mousex);
             let bottom = Math.min(e.clientY, mousey);
             let top = Math.max(e.clientY, mousey);
-            let flags1 = [];
-            let flags2 = [];
-            for (let i = 0; i < graphXPosLocal.length; i++) {
-
-                for (let j = 0; j < graphXPosLocal[i].length; j++) {
-                    if ((left <= graphXPos[i]+graphXPosLocal[i][j]) && (right >= graphXPos[i]+graphXPosLocal[i][j]) && (bottom <= graphYPos[i]+graphYPosLocal[i][j]) && (top >= graphYPos[i]+graphYPosLocal[i][j])) {
-                        if (!enabled[j]) {
-                            toggleCountry(j);
-                        }
-                        flags1[j] = true;
-                    } else {
-                        if (enabled[j]) {
-                            //toggleCountry(indexToName[j]);
-                            flags2[j] = true;
-                        }
-
-                    }
-                }
-            }
-            for (let i = 0; i < Math.max(flags1.length, flags2.length); i++) {
-                if (flags2[i] && !flags1[i]) {
-                    toggleCountry(i);
-                }
-            }
+            boxCollisionCheck(left, right, top, bottom, false);
 
         }
 
@@ -910,6 +1360,7 @@ function initHistory() {
             }
         }
     });
+    loadOwnHistory();
 }
 
 function historyLoadPanels() {
@@ -936,13 +1387,14 @@ function historyInitPanel(index) {
     historyCount++;
 }
 
-function historyAddPanel() {
-    let hdata = history[history.length - 1];
+function historyAddPanel(index) {
+    let hdata = history[index];
     let panel = document.createElement('div');
     let himage = document.createElement('img');
-    let i = history.length - 1;
+    let i = index;
     himage.setAttribute('src', hdata.img);
     himage.setAttribute('class', 'history-image');
+    console.log('add panel');
     if (hdata.previous) {
         let $prev = $($('#history').children()[hdata.previous]).children().last().clone();
         $prev.attr('class', 'history-previous-image');
@@ -982,7 +1434,7 @@ function historyAddPanel() {
         edittext.focus();
         edittext.blur(function () {
             let html = $(this).val();
-            hdata.note=html;
+            hdata.note = html;
             let viewtext = $("<div>");
             viewtext.html(html);
             $(this).replaceWith(viewtext);
@@ -991,14 +1443,14 @@ function historyAddPanel() {
         edittext.keypress(function (e) {
             if (e.which == 13) {
                 let html = $(this).val();
-                hdata.note=html;
+                hdata.note = html;
                 let viewtext = $("<div>");
                 viewtext.html(html);
                 $(this).replaceWith(viewtext);
             }
         });
 
-    })
+    });
 
     note.appendChild(noteText);
     note.appendChild(noteEdit);
@@ -1007,10 +1459,18 @@ function historyAddPanel() {
     panel.setAttribute('class', 'history-element');
     $(himage).click(function (event) {
         event.stopPropagation();
-        load(history[i].enabled);
+        load(history[i].enabled, history[i].mouseEnabled, history[i].boxSelectors);
         previousEntry = i;
         console.log('loaded no ' + previousEntry);
-    })
+    });
+    $(himage).hover(function () {
+        if (!arrayEqual(enabled, hdata.enabled)) {
+            showTimer = 1;
+            showTemp(hdata);
+        }
+    }, function () {
+        hideTemp();
+    });
     panel.appendChild(himage);
 
     let buttonbar = document.createElement('div');
@@ -1022,7 +1482,7 @@ function historyAddPanel() {
     $(importantButton).click(function () {
         $(himage).toggleClass('important');
         $(importantButton).toggleClass('important');
-        hdata.important=true;
+        hdata.important = true;
     });
 
 
@@ -1042,6 +1502,41 @@ function historyAddPanel() {
     historyCount++;
     historyTarget = historyCount - 1;
     historyAnimation = true;
+}
+
+function arrayEqual(a1, a2) {
+    if (a1.length != a2.length) return false;
+    for (let i = 0; i < a1.length; i++) {
+        if (a1[i] != a2[i]) return false;
+    }
+    return true;
+}
+
+function showTemp(historyEntry) {
+    if (showTimer == 0) {
+        return;
+    } else if (showTimer > 30) {
+        for (let i = 0; i < historyEntry.enabled.length; i++) {
+            if (historyEntry.enabled[i]) {
+                if (countryIdMap[indexToName[i]] != null) {
+                    $('#' + countryIdMap[indexToName[i]]).addClass('land-temp');
+                }
+                countryDOMElements[i].addClass('red-border');
+            }
+        }
+    } else {
+        showTimer++;
+        requestAnimationFrame(function () {
+            showTemp(historyEntry);
+        });
+    }
+
+}
+
+function hideTemp() {
+    showTimer = 0;
+    $('#worldmap').find('.land-temp').removeClass('land-temp');
+    $('.red-border').removeClass('red-border');
 }
 
 
@@ -1105,4 +1600,95 @@ function historyUpdatePosition() {
         historyPosition = historyTarget;
         historyAnimation = false;
     } else historyPosition += historyMovement;
+}
+
+function saveHistoryEntry(entry) {
+    let boxS = [];
+    for (let i = 0; i < entry.boxSelectors.length; i++) {
+        boxS.push(JSON.stringify(entry.boxSelectors[i]));
+    }
+    $.ajax({
+        url: serviceURL,
+        type: 'POST',
+        data: JSON.stringify({ lastName: currentUser, enabled: entry.enabled, previous: entry.previous, important: entry.important, note: entry.note, timestamp: entry.timestamp, boxSelectors: boxS, mouseEnabled: entry.mouseEnabled }),
+        contentType: "application/json; charset=utf-8",
+        dataType: 'json'
+    });
+
+    // $.post(serviceURL,{lastName:currentUser,enabled:entry.enabled,previous:entry.previous,important:entry.important,note:entry.note,timestamp:entry.timestamp},function(data){
+    //     entry.id=data.content.id;
+    // });
+}
+
+function loadOwnHistory() {
+    $.get(serviceURL + '/search/findByLastName?name=' + currentUser, function (data) {
+        console.log('data loaded');
+        let h = data._embedded.history;
+        let s = [];
+        for (let i = 0; i < h.length; i++) {
+            s = [];
+            for (let j = 0; j < h[i].boxSelectors.length; j++) {
+                s.push(JSON.parse(h[i].boxSelectors[j]));
+                if (typeof s[j] == "string") {
+                    s[j] = JSON.parse(s[j]);
+                }
+            }
+
+            h[i].boxSelectors = s;
+            history.push(h[i]);
+            addHistoryEntry(i);
+        }
+    })
+}
+
+function loadAllHistories() {
+    $.get(serviceURL + '/search/OrderByLastNameAsc', function (data) {
+        console.log('data loaded');
+        console.log(data);
+    })
+}
+
+function createSelectorButtons() {
+    let buttons = document.createElement('div');
+    const selectorIcons = ['fas fa-square', 'fas fa-expand', 'fas fa-mouse-pointer', 'fas fa-times', 'fas fa-trash'];
+    buttons.setAttribute('class', 'buttonmenu-bottom-left');
+    for (let i = 0; i < selectors.length; i++) {
+        let b = document.createElement('button');
+        b.setAttribute('class', 'iconbutton color-selectors');
+        if (i == 0) b.setAttribute('class', 'iconbutton color-selectors selected');
+        if (selectorIcons[i].startsWith('fa')) {
+            b.innerHTML = '<i class="' + selectorIcons[i] + '"></i>';
+        } else {
+            b.innerHTML = selectorIcons[i];
+        }
+        if (i == 4) {
+            $(b).mousedown(function (e) {
+                e.stopPropagation();
+            });
+            $(b).click(function () {
+                empty();
+            })
+        } else {
+            $(b).mousedown(function (e) {
+                e.stopPropagation();
+            });
+            $(b).click(function () {
+                if (!$(b).hasClass('selected')); {
+                    let p = $(b).parent();
+                    p.find('.selected').removeClass('selected');
+                    $(b).addClass('selected');
+                    changeSelectionMode(i);
+                }
+
+            })
+        }
+
+        buttons.appendChild(b);
+    }
+
+    $('#main').append(buttons);
+}
+
+function changeSelectionMode(index) {
+    selector = index;
 }

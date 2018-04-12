@@ -2,6 +2,21 @@
 <!-- (c) ammap.com | SVG map of World - Low -->
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:amcharts="http://amcharts.com/ammap" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="902" height="618" viewBox="0 -20 700 581">
 	<defs>
+		<pattern id="diagonalHatchDefault" patternUnits="userSpaceOnUse" width="6" height="6">
+			<rect x="0" y="0" width="6" height="6" fill="#CCCCCC"/>
+			<path d="M-1,1 l2,-2
+					M0,6 l6,-6
+					M5,7 l2,-2" 
+					style="stroke:#f05050; stroke-width:1" />
+			
+		</pattern>
+		<pattern id="diagonalHatchActive" patternUnits="userSpaceOnUse" width="6" height="6">
+			<rect x="0" y="0" width="6" height="6" fill="#5d9cec"/>
+			<path d="M-1,1 l2,-2
+					M0,6 l6,-6
+					M5,7 l2,-2" 
+					style="stroke:#f05050; stroke-width:1" />
+		</pattern>
 		<style type="text/css">
 			.land
 			{
@@ -27,6 +42,12 @@
 			}
 			.land-active:hover{
 				fill:#4b91ea;
+			}
+			.land-temp{
+				fill:url(#diagonalHatchDefault);
+			}
+			.land-active.land-temp{
+				fill:url(#diagonalHatchActive);
 			}
 		</style>
 		<amcharts:ammap projection="mercator" leftLongitude="-169.6" topLatitude="83.68" rightLongitude="190.25" bottomLatitude="-55.55"></amcharts:ammap>
