@@ -18,6 +18,7 @@ let countryIdMap = {};
 let count = 0;
 let asyncAddQueue = [];
 let history = [];
+let allHistoryData = [];
 let selectionchange = false;
 let svg = document.querySelector('svg');
 let countryDOMElements = [];
@@ -27,7 +28,6 @@ const historyRadius = 3;
 let historyPosition = 0;
 let historyTarget = 0;
 let historyAnimation = false;
-let historyChanged = [];
 let historyMovement = 0;
 let historyOffsetX = 30;
 let historyOffsetY = 30;
@@ -66,6 +66,12 @@ let mouseEnabled = [];
 let waiting = 0;
 let menuMode = 'detached';
 let showTimer = 0;
+let historyDisplayMode = 0;
+let historyImpFilter = false;
+let historyCommFilter = false;
+let historyDoms=[];
+let historyPositions=[];
+let historyTargets=[];
 
 $('#choosedatabtn').focusout(function () {
     /*
@@ -268,9 +274,16 @@ function worldMapLoaded() {
 function inlineWorldmap() {
     let $e = $('#worldmap-object');
     $e.replaceWith($($e[0].contentDocument.documentElement).clone());
+    //copyWorldMap();
     initZoom($('#worldmap').children()[0]);
     worldmapListeners();
     buildNamesMaps();
+}
+
+function copyWorldMap(){
+    let w=$('#worldmap').clone();
+    w.attr('id','worldmap-copy');
+    $('#main').append(w);
 }
 
 function initZoom(svg) {
@@ -658,7 +671,17 @@ function toggleMenu(type) {
 }
 
 function closeMenu() {
-    $('#menucontainer').fadeOut(200);
+    if (menuMode == "detached") {
+        $('#menucontainer').fadeOut(200);
+    }
+    if (menuMode == "attached") {
+        let dist = -($(window).height() - $('#worldmap').height() - 60) + 'px';
+        $('#menucontainer').animate({ 'bottom': dist }, 200, function () {
+            $('#menucontainer').css('display', 'none');
+        });
+        $('.buttonmenu-bottom-right').animate({ 'bottom': 0 }, 200);
+        $('.buttonmenu-bottom-left').animate({ 'bottom': 0 }, 200);
+    }
 }
 
 function createMenus() {
@@ -717,6 +740,35 @@ function createHistoryMenu() {
     history.setAttribute('id', 'history');
     content.appendChild(history);
 
+    let filterButtons = document.createElement('div');
+    let impFilter = document.createElement('button');
+    let commFilter = document.createElement('button');
+
+    filterButtons.setAttribute('class', 'history-filter-area');
+    impFilter.setAttribute('class', 'history-important-button');
+    impFilter.innerHTML = '<i class="fas fa-exclamation"></i>';
+    commFilter.setAttribute('class', 'history-comment-button');
+    commFilter.innerHTML = '<i class="fas fa-comment"></i>'
+
+    $(impFilter).click(function () {
+        historyImpFilter = !historyImpFilter;
+        $(impFilter).toggleClass('enabled');
+        historyAnimation = true;
+        historyModeInitial = true;
+    });
+    $(commFilter).click(function () {
+        historyCommFilter = !historyCommFilter;
+        $(commFilter).toggleClass('enabled');
+        historyAnimation = true;
+        historyModeInitial = true;
+    })
+
+    filterButtons.innerHTML = 'Filters';
+    filterButtons.appendChild(impFilter);
+    filterButtons.appendChild(commFilter);
+
+    content.appendChild(filterButtons);
+
     return content;
 }
 
@@ -728,7 +780,7 @@ function createPanelMenu() {
     //history.setAttribute('id', 'history');
 
     for (let i = 0; i < availablePanels.length; i++) {
-        let panel = document.createElement('div');
+        let panel = document.createElement('button');
 
         if (activeGraphs[i]) {
             panel.setAttribute('class', 'preview-panel active');
@@ -759,8 +811,40 @@ function createPanelMenu() {
 function createSocialMenu() {
     let content = document.createElement('div');
     content.setAttribute('class', 'menucontent social');
-    content.innerHTML = 'Social Menu';
+    
+    content.append(getUserSelection());
+
+
     return content;
+}
+
+function getUserSelection(){
+    let usernames=[];
+    for(let i=0;i<allHistoryData.length;i++){
+        if(allHistoryData[i].lastName!=null && (allHistoryData[i].lastName!=currentUser)){
+            if(!(usernames.includes(allHistoryData[i].lastName))){
+                let user={lastName:allHistoryData[i].lastName,recentChange:allHistoryData[i].timestamp};
+                usernames.push(allHistoryData[i].lastName);
+            }else{
+                let index=usernames.find(allHistoryData[i].lastName);
+                if(allHistoryData[i].timestamp>usernames[index].recentChange) usernames[index].recentChange=allHistoryData[i].timestamp;
+            }
+        }
+    }
+
+    for(let i=0;i<usernames.length;i++){
+        let b=document.createElement('button');
+        b.setAttribute('class','preview-panel');
+        b.innerHTML=usernames[i].lastName+' time:'+usernames[i].recentChange;
+        $(b).click(function(){
+            loadUserHistory(usernames[i]);
+        });
+
+    }
+}
+
+function loadUserHistory(username){
+    let div=$('.social');
 }
 
 function createOptionsMenu() {
@@ -769,7 +853,7 @@ function createOptionsMenu() {
 
     let options = document.createElement('div');
     options.setAttribute('class', 'options-container');
-
+    /*
     for (let i = 0; i < 5; i++) {
         let option = document.createElement('div');
         option.setAttribute('class', 'option-box');
@@ -784,8 +868,10 @@ function createOptionsMenu() {
         option.appendChild(txt);
         options.appendChild(option);
     }
-
+    */
+    options.innerHTML = "(nothing here)";
     content.appendChild(options);
+
 
     return content;
 
@@ -980,11 +1066,9 @@ function addHistoryEntry(index) {
         var imgURI = canvas
             .toDataURL('image/png');
         history[index].img = imgURI;
-        history[index].important = false;
+        if (history[index].important == null) history[index].important = false;
         historyAddPanel(index);
     };
-
-
 }
 
 function empty() {
@@ -1051,7 +1135,7 @@ function boxCollisionCheck(left_, right_, top_, bottom_, inverted) {
 
 }
 function addToMouseEnabled(left_, right_, top_, bottom_) {
-    
+
     let flags1 = [];
     let flags2 = [];
     let left = 0, right = 0, top = 0, bottom = 0;
@@ -1338,53 +1422,61 @@ function enableDragging() {
  */
 
 function initHistory() {
-    historyWidth = $(document).width() - historyOffsetX * 2 - 360;
+    
+    loadOwnHistory().then(function () {
+        historyCount = history.length;
+        historyWidth = $(document).width() - historyOffsetX * 2 - 360;
 
-    console.log('historywidth ' + historyWidth);
-    historyLoadPanels();
-    historyInitPanels();
-    historyPanelLoop();
-    $('#history').bind('mousewheel', function (e) {
-        if (e.originalEvent.wheelDelta > 0) {
-            //right
-            if (historyTarget < historyCount - 1) {
-                historyTarget++;
-                historyAnimation = true;
+        console.log('historywidth ' + historyWidth);
+        historyDoms.push($('#history'));
+        historyLoadPanels(historyDoms[0]);
+        historyInitPanels(historyDoms[0]);
+        historyPanelLoop(historyDoms[0]);
+        // historyUpdateDOM();
+        $('#history').bind('mousewheel', function (e) {
+            if (e.originalEvent.wheelDelta > 0) {
+                //right
+                if (historyTargets[0] < historyCounts[0] - 1) {
+                    historyTargets[0]++;
+                    historyAnimations[0] = true;
+                }
             }
-        }
-        else {
-            //left        
-            if (historyTarget > 0) {
-                historyTarget--;
-                historyAnimation = true;
+            else {
+                //left        
+                if (historyTargets[0] > 0) {
+                    historyTargets[0]--;
+                    historyAnimations[0] = true;
+                }
             }
-        }
-    });
-    loadOwnHistory();
+        });
+        loadAllHistories();
+    })
+
+
 }
 
-function historyLoadPanels() {
+function historyLoadPanels(dom) {
     for (let i = 0; i < 0; i++) {
-        historyInitPanel(i);
+        historyInitPanel(i,dom);
     }
 }
 
-function historyInitPanels() {
-    let ch = $('#history').children();
-    historyTarget = historyCount - 1;
-    historyPosition = historyCount - 1;
+function historyInitPanels(dom) {
+    let ch = dom.children();
+    // historyTarget = -1;
+    // historyPosition = -1;
+    console.log('history position:' + historyPosition)
     //console.log('changing:');
     for (let i = 0; i < historyCount; i++) {
         $(ch[i]).css('left', historyWidth * 0 + historyOffsetX + 'px');
     }
-    historyUpdateDOM();
+    historyUpdateDOM(dom);
 }
 
-function historyInitPanel(index) {
+function historyInitPanel(index,dom) {
     let panel = document.createElement('div');
     panel.setAttribute('class', 'history-element');
-    $('#history').append(panel);
-    historyCount++;
+    dom.append(panel);
 }
 
 function historyAddPanel(index) {
@@ -1438,6 +1530,12 @@ function historyAddPanel(index) {
             let viewtext = $("<div>");
             viewtext.html(html);
             $(this).replaceWith(viewtext);
+            if (html != "") {
+                $(himage).addClass('commented');
+            } else {
+                $(himage).removeClass('commented');
+            }
+            editHistoryEntry(hdata._links.self.href, hdata);
         })
 
         edittext.keypress(function (e) {
@@ -1471,6 +1569,12 @@ function historyAddPanel(index) {
     }, function () {
         hideTemp();
     });
+    if (hdata.important == true) {
+        $(himage).addClass('enabled');
+    }
+    if (hdata.note != null) {
+        $(himage).addClass('commented');
+    }
     panel.appendChild(himage);
 
     let buttonbar = document.createElement('div');
@@ -1481,8 +1585,9 @@ function historyAddPanel(index) {
     importantButton.innerHTML = '<i class="fas fa-exclamation"></i>';
     $(importantButton).click(function () {
         $(himage).toggleClass('important');
-        $(importantButton).toggleClass('important');
-        hdata.important = true;
+        $(importantButton).toggleClass('enabled');
+        hdata.important = !hdata.important;
+        editHistoryEntry(hdata._links.self.href, hdata);
     });
 
 
@@ -1540,41 +1645,91 @@ function hideTemp() {
 }
 
 
-function historyPanelLoop() {
-    if (historyAnimation) {
+function historyPanelLoop(dom) {
+    if (historyAnimation && (historyDisplayMode == 0)) {
         historyUpdatePosition();
-        historyUpdateDOM();
-
+        historyUpdateDOM(dom);
     }
-    requestAnimationFrame(historyPanelLoop);
+    requestAnimationFrame(function(){
+        historyPanelLoop(dom);
+    });
 }
 
-function historyUpdateDOM() {
-    let ch = $('#history').children();
-    for (let i = 0; i < historyCount; i++) {
-        let pos = (i - historyPosition + historyRadius) / (historyRadius * 2);
-        let size = 1 - Math.abs(pos - 0.5);
-        let outside = (pos < -(1 / historyRadius)) || (pos > 1 + 1 / historyRadius);
-        if (!outside) {
-            if (pos < 0) {
-                pos = 0;
-                size = 0.5;
+function historyUpdateDOM(dom) {
+    let ch = dom.children();
+    let hidden = [];
+    let filtering = false;
+    if (historyImpFilter || historyCommFilter) {
+        let filtered = false;
+        for (let i = 0; i < ch.length; i++) {
+            filtered = false;
+            if (historyCommFilter) {
+                if ($(ch[i]).find('img.commented').length > 0) {
+                    filtered = true;
+                    filtering = true;
+                }
             }
-            if (pos > 1) {
-                pos = 1;
-                size = 0.5;
+            if (historyImpFilter) {
+                console.log(i + ' ' + $(ch[i]).find('img').hasClass('important'))
+                if ($(ch[i]).find('img.important').length > 0) {
+                    filtered = true;
+                    filtering = true;
+                }
             }
-            $(ch[i]).css({
-                'left': historyWidth * historyPositionConverter(pos) + historyOffsetX + 'px',
-                'transform': 'scale(' + size + ')',
-                'z-index': Math.round(size * 10)
-            });
-            if ($(ch[i]).children().length > 1) {
-                let opacity = 1 - 2 * Math.abs(historyPositionConverter(pos) - 0.5);
-                $(ch[i]).find('.history-previous, .history-note').css('opacity', opacity);
-            }
-
+            hidden[i] = !filtered;
         }
+    }
+    let skipped = 0;
+    if (filtering) {
+        for (let i = 0; i < historyTarget; i++) {
+            if (hidden[i]) {
+                skipped++;
+            }
+        }
+        if (historyModeInitial) {
+            historyTarget = 0;
+            historyModeInitial = false;
+        }
+    }
+
+    for (let i = 0; i < historyCount; i++) {
+
+        if (!hidden[i]) {
+            $(ch[i]).show();
+            let pos = ((i) - historyPosition + historyRadius) / (historyRadius * 2);
+            let size = 1 - Math.abs(pos - 0.5);
+            let outside = (pos < -(1 / historyRadius)) || (pos > 1 + 1 / historyRadius);
+            if (i == 0) {
+                // console.log(historyPosition);
+                // console.log(historyRadius);
+                // console.log(outside);
+
+            }
+            if (!outside) {
+                if (pos < 0) {
+                    pos = 0;
+                    size = 0.5;
+                }
+                if (pos > 1) {
+                    pos = 1;
+                    size = 0.5;
+                }
+                $(ch[i]).css({
+                    'left': historyWidth * historyPositionConverter(pos) + historyOffsetX + 'px',
+                    'transform': 'scale(' + size + ')',
+                    'z-index': Math.round(size * 10)
+                });
+                if ($(ch[i]).children().length > 1) {
+                    let opacity = 1 - 2 * Math.abs(historyPositionConverter(pos) - 0.5);
+                    $(ch[i]).find('.history-previous, .history-note').css('opacity', opacity);
+                }
+
+            }
+        } else {
+            $(ch[i]).hide();
+            skipped++;
+        }
+
     }
 
 }
@@ -1595,12 +1750,13 @@ function historyPositionConverter(pos) {
 
 function historyUpdatePosition() {
     historyMovement = (historyTarget - historyPosition) / 8;
-
+    console.log(historyTarget-historyPosition);
     if (Math.abs(historyTarget - historyPosition) < 0.005) {
         historyPosition = historyTarget;
         historyAnimation = false;
     } else historyPosition += historyMovement;
 }
+
 
 function saveHistoryEntry(entry) {
     let boxS = [];
@@ -1613,6 +1769,13 @@ function saveHistoryEntry(entry) {
         data: JSON.stringify({ lastName: currentUser, enabled: entry.enabled, previous: entry.previous, important: entry.important, note: entry.note, timestamp: entry.timestamp, boxSelectors: boxS, mouseEnabled: entry.mouseEnabled }),
         contentType: "application/json; charset=utf-8",
         dataType: 'json'
+    }).done(function (data) {
+        console.log('saved');
+        console.log(entry);
+        console.log(data);
+
+        entry = data;
+
     });
 
     // $.post(serviceURL,{lastName:currentUser,enabled:entry.enabled,previous:entry.previous,important:entry.important,note:entry.note,timestamp:entry.timestamp},function(data){
@@ -1620,8 +1783,31 @@ function saveHistoryEntry(entry) {
     // });
 }
 
+function deleteHistoryEntry(url) {
+    $.ajax({
+        url: url,
+        type: 'DELETE'
+    })
+}
+
+function editHistoryEntry(url, entry) {
+    let boxS = [];
+    for (let i = 0; i < entry.boxSelectors.length; i++) {
+        boxS.push(JSON.stringify(entry.boxSelectors[i]));
+    }
+    console.log('--------------')
+    console.log(entry.important);
+    $.ajax({
+        url: url,
+        type: 'PUT',
+        data: JSON.stringify({ lastName: currentUser, enabled: entry.enabled, previous: entry.previous, important: entry.important, note: entry.note, timestamp: entry.timestamp, boxSelectors: boxS, mouseEnabled: entry.mouseEnabled }),
+        contentType: 'application/json; charset=utf-8',
+        dataType: 'json'
+    })
+}
+
 function loadOwnHistory() {
-    $.get(serviceURL + '/search/findByLastName?name=' + currentUser, function (data) {
+    return $.get(serviceURL + '/search/findByLastName?name=' + currentUser, function (data) {
         console.log('data loaded');
         let h = data._embedded.history;
         let s = [];
@@ -1643,8 +1829,9 @@ function loadOwnHistory() {
 
 function loadAllHistories() {
     $.get(serviceURL + '/search/OrderByLastNameAsc', function (data) {
-        console.log('data loaded');
-        console.log(data);
+        console.log('data loadedddd');
+        allHistoryData = data._embedded.history;
+        console.log(allHistoryData);
     })
 }
 

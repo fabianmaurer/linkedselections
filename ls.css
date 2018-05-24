@@ -202,13 +202,13 @@ body{
     cursor: pointer;
 }
 
-.enabled{
+.graph-circle.enabled{
     background-color:#5d9cec;
     z-index:1;
     border:1px solid black;
 }
 
-.enabled:hover{
+.graph-circle.enabled:hover{
     z-index:2;
     background-color:#4b91ea;
 }
@@ -273,10 +273,15 @@ body{
 .history-image:hover + .history-buttonbar{
     opacity:1;
 }
+.history-image.commented{
+    border:1px solid #1aacda;
+}
 
 .history-image.important{
     border:1px solid #f05050;
 }
+
+
 
 .history-previous{
     height:116px;
@@ -541,7 +546,7 @@ body{
     font-size:16px;
 }
 
-.history-important-button.important{
+.history-important-button.enabled{
     color:#ee3d3d;
 }
 
@@ -550,6 +555,10 @@ body{
 }
 
 .history-comment-button:hover{
+    color:#1aacda;
+}
+
+.history-comment-button.enabled{
     color:#1aacda;
 }
 
@@ -638,4 +647,14 @@ body{
 
 .red-border{
     border:1px solid #f05050;
+}
+
+.history-filter-area{
+    font-size:12px;
+    font-style:italic;
+    color:white;
+    position:absolute;
+    right:0px;
+    top:0px;
+    border:1px solid #666;
 }
