@@ -304,6 +304,7 @@ function worldmapListeners() {
 
 
             toggleCountry(nameToIndex[e.target.getAttribute('title')]);
+            console.log(1);
             save();
         }, false);
 
@@ -313,6 +314,7 @@ function worldmapListeners() {
 }
 
 function toggleCountry(index) {
+    console.log('toggle')
     selectionchange = true;
     count++;
     enabled[index] = !enabled[index];
@@ -498,6 +500,8 @@ function drawScatterPlot(dataX, dataY, ctx, $graph, index) {
                 if (selector == 2) {
                     mouseEnabled[i] = !mouseEnabled[i];
                     toggleCountry(i);
+                    console.log(2)
+                    save();
                 }
             })
             $graph.append(c);
@@ -585,7 +589,7 @@ function save() {
     obj.mouseEnabled = mouseEnabled;
     history.push(obj);
     saveHistoryEntry(obj);
-    addHistoryEntry(history.length - 1);
+    addHistoryEntry(history.length - 1,false);
 }
 
 function toggleMenuMode() {
@@ -799,7 +803,6 @@ function createPanelMenu() {
             } else {
                 removeGraph(i);
             }
-            console.log('a');
         })
 
         panel.innerHTML = availablePanels[i][0] + ' / ' + availablePanels[i][1];
@@ -834,7 +837,6 @@ function getUserSelection() {
     console.log('hhh')
     console.log(allHistoryData);
     for (let i = 0; i < allHistoryData.length; i++) {
-        console.log(allHistoryData[i].lastName);
         if (allHistoryData[i].lastName != null && (allHistoryData[i].lastName != currentUser)) {
             if (!(allHistoryData[i].lastName in usernames)) {
                 usernames[allHistoryData[i].lastName] = allHistoryData[i].timestamp;
@@ -844,12 +846,9 @@ function getUserSelection() {
         }
     }
     let userDivs = [];
-    console.log('usernames');
-    console.log(usernames);
     for (let key in usernames) {
         let b = document.createElement('button');
         b.setAttribute('class', 'preview-panel');
-        console.log(key);
         let d = new Date(usernames[key]);
         console.log(d.getDate())
         b.innerHTML = key;
@@ -908,12 +907,10 @@ function formatDate(date) {
 }
 
 function loadUserHistory(username) {
-    console.log(username);
     let userhistory = [];
     for (let i = 0; i < allHistoryData.length; i++) {
         if (allHistoryData[i].lastName == username) userhistory.push(allHistoryData[i]);
     }
-    console.log(userhistory);
     let currentState = { enabled: enabled.slice(), boxSelectors: boxSelectors.slice(), mouseEnabled: mouseEnabled.slice() };
     for (let i = 0; i < userhistory.length; i++) {
         setTimeout(function () {
@@ -1049,7 +1046,6 @@ function loadUserHistory(username) {
         historyTarget2 = historyCount2 - 1;
         historyAnimation2 = true;
         $('#userhistory').bind('mousewheel', function (e) {
-            console.log('a');
             if (e.originalEvent.wheelDelta > 0) {
                 //right
                 if (historyTarget2 < historyCount2 - 1) {
@@ -1065,7 +1061,6 @@ function loadUserHistory(username) {
                 }
             }
         });
-        let currentState = { enabled: enabled.slice(), boxSelectors: boxSelectors.slice(), mouseEnabled: mouseEnabled.slice() };
         load(currentState.enabled, currentState.mouseEnabled, currentState.boxSelectors);
     }, (userhistory.length+10)*30);
 
@@ -1146,7 +1141,7 @@ function updateHistoryDOM() {
 function load(newEnabled, mouseEnabled_, boxSelectors_) {
     mouseEnabled = mouseEnabled_;
     boxSelectors = boxSelectors_;
-
+    
     loadBoxSelectors();
     for (let i = 0; i < enabled.length; i++) {
         if (enabled[i] != newEnabled[i]) {
@@ -1202,7 +1197,10 @@ function loadBoxSelectors() {
         dragging = false;
         $('#main').append($box);
         let id = i;
-        if (selectionchange) save();
+        // if (selectionchange){
+        //     console.log('boxSelectirs')
+        //     save();
+        // }
         $(v1).mousedown(function (e) {
             if (selector == 3) {
                 let s = boxSelectors[id];
@@ -1270,8 +1268,8 @@ function loadBoxSelectors() {
     }
 }
 
-function addHistoryEntry(index) {
-    load(history[index].enabled, history[index].mouseEnabled, history[index].boxSelectors);
+function addHistoryEntry(index,initial) {
+    if(initial) load(history[index].enabled, history[index].mouseEnabled, history[index].boxSelectors);
     let svg = $('#worldmap').children().first()[0];
     var canvas = document.createElement('canvas');
     canvas.width = 902;
@@ -1417,7 +1415,9 @@ function enableDragging() {
     $(window).mouseup(function (e) {
         predragging = false;
         if (vBoxDrag || hBoxDrag) {
-            if (selectionchange) save();
+            if (selectionchange){
+                save();
+            }
         }
         vBoxDrag = false;
         hBoxDrag = false;
@@ -1445,7 +1445,9 @@ function enableDragging() {
                 addToMouseEnabled(left, right, bottom, top);
                 $('#dragbox').hide();
                 dragging = false;
-                if (selectionchange) save();
+                if (selectionchange){
+                    save();
+                }
             } else if (selector == 1) {
                 let $dbox = $('#dragbox');
                 let $box = $('#dragbox').clone();
@@ -1491,7 +1493,9 @@ function enableDragging() {
                     bottom: parseInt($box.css('top')),
                     left: parseInt($box.css('left'))
                 });
-                if (selectionchange) save();
+                if (selectionchange){
+                    save();
+                }
                 $(v1).mousedown(function (e) {
                     if (selector == 3) {
                         let s = boxSelectors[id];
@@ -1990,9 +1994,6 @@ function historyUpdatePosition() {
 }
 
 function historyUpdatePosition2() {
-    console.log('222');
-    console.log(historyPosition2);
-    console.log(historyTarget2);
     historyMovement2 = (historyTarget2 - historyPosition2) / 8;
     if (Math.abs(historyTarget2 - historyPosition2) < 0.005) {
         historyPosition2 = historyTarget2;
@@ -2065,7 +2066,7 @@ function loadOwnHistory() {
 
             h[i].boxSelectors = s;
             history.push(h[i]);
-            addHistoryEntry(i);
+            addHistoryEntry(i,true);
         }
     })
 }
