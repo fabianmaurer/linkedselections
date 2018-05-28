@@ -24,11 +24,16 @@ let svg = document.querySelector('svg');
 let countryDOMElements = [];
 
 let historyCount = 0;
+let historyCount2 = 0;
 const historyRadius = 3;
 let historyPosition = 0;
+let historyPosition2 = 0;
 let historyTarget = 0;
+let historyTarget2 = 0;
 let historyAnimation = false;
+let historyAnimation2 = false;
 let historyMovement = 0;
+let historyMovement2 = 0;
 let historyOffsetX = 30;
 let historyOffsetY = 30;
 let selector = 0;
@@ -819,7 +824,9 @@ function loadSocialMenu() {
     for (let i = 0; i < d.length; i++) {
         $('.menucontent.social').append(d[i]);
     }
-
+    let h = document.createElement('div');
+    h.setAttribute('id', 'userhistory');
+    $('.menucontent.social').append(h);
 }
 
 function getUserSelection() {
@@ -839,11 +846,10 @@ function getUserSelection() {
     let userDivs = [];
     console.log('usernames');
     console.log(usernames);
-    for (key in usernames) {
+    for (let key in usernames) {
         let b = document.createElement('button');
         b.setAttribute('class', 'preview-panel');
-        console.log('key');
-        console.log(usernames[key]);
+        console.log(key);
         let d = new Date(usernames[key]);
         console.log(d.getDate())
         b.innerHTML = key;
@@ -902,119 +908,167 @@ function formatDate(date) {
 }
 
 function loadUserHistory(username) {
+    console.log(username);
     let userhistory = [];
     for (let i = 0; i < allHistoryData.length; i++) {
         if (allHistoryData[i].lastName == username) userhistory.push(allHistoryData[i]);
     }
+    console.log(userhistory);
+    let currentState = { enabled: enabled.slice(), boxSelectors: boxSelectors.slice(), mouseEnabled: mouseEnabled.slice() };
     for (let i = 0; i < userhistory.length; i++) {
-        let hdata = userhistory[index];
-        let panel = document.createElement('div');
-        let himage = document.createElement('img');
-        let i = index;
-        himage.setAttribute('src', hdata.img);
-        himage.setAttribute('class', 'history-image');
-        console.log('add panel');
+        setTimeout(function () {
+            load(userhistory[i].enabled, userhistory[i].mouseEnabled, userhistory[i].boxSelectors);
+            let svg = $('#worldmap').children().first()[0];
+            var canvas = document.createElement('canvas');
+            canvas.width = 902;
+            canvas.height = 618;
+            var ctx = canvas.getContext('2d');
+            var data = (new XMLSerializer()).serializeToString(svg);
+            var DOMURL = window.URL || window.webkitURL || window;
 
-        let note = document.createElement('div');
-        note.setAttribute('class', 'history-note');
+            var img = new Image();
+            var svgBlob = new Blob([data], { type: 'image/svg+xml;charset=utf-8' });
+            var url = DOMURL.createObjectURL(svgBlob);
+            img.src = url;
+            img.onload = function () {
+                ctx.drawImage(img, 0, 0);
+                DOMURL.revokeObjectURL(url);
 
-        let noteText = document.createElement('div');
-        noteText.innerHTML = hdata.note || '';
+                var imgURI = canvas
+                    .toDataURL('image/png');
+                userhistory[i].img = imgURI;
+                if (userhistory[i].important == null) userhistory[i].important = false;
+                let hdata = userhistory[i];
+                let panel = document.createElement('div');
+                let himage = document.createElement('img');
+                himage.setAttribute('src', hdata.img);
+                himage.setAttribute('class', 'history-image');
 
-        let noteEdit = document.createElement('button');
-        noteEdit.setAttribute('class', 'top-right-edit-button');
-        noteEdit.innerHTML = '<i class="fas fa-pencil-alt"></i>';
-        $(noteEdit).click(function () {
-            let textarea = $(this).prev('div').html();
-            let edittext = $('<textarea spellcheck="false" />');
-            edittext.val(textarea);
-            $(this).prev('div').replaceWith(edittext);
-            edittext.focus();
-            edittext.blur(function () {
-                let html = $(this).val();
-                hdata.note = html;
-                let viewtext = $("<div>");
-                viewtext.html(html);
-                $(this).replaceWith(viewtext);
-                if (html != "") {
+                let note = document.createElement('div');
+                note.setAttribute('class', 'history-note');
+
+                let noteText = document.createElement('div');
+                noteText.innerHTML = hdata.note || '';
+
+                let noteEdit = document.createElement('button');
+                noteEdit.setAttribute('class', 'top-right-edit-button');
+                noteEdit.innerHTML = '<i class="fas fa-pencil-alt"></i>';
+                $(noteEdit).click(function () {
+                    let textarea = $(this).prev('div').html();
+                    let edittext = $('<textarea spellcheck="false" />');
+                    edittext.val(textarea);
+                    $(this).prev('div').replaceWith(edittext);
+                    edittext.focus();
+                    edittext.blur(function () {
+                        let html = $(this).val();
+                        hdata.note = html;
+                        let viewtext = $("<div>");
+                        viewtext.html(html);
+                        $(this).replaceWith(viewtext);
+                        if (html != "") {
+                            $(himage).addClass('commented');
+                        } else {
+                            $(himage).removeClass('commented');
+                        }
+                        editHistoryEntry(hdata._links.self.href, hdata);
+                    })
+
+                    edittext.keypress(function (e) {
+                        if (e.which == 13) {
+                            let html = $(this).val();
+                            hdata.note = html;
+                            let viewtext = $("<div>");
+                            viewtext.html(html);
+                            $(this).replaceWith(viewtext);
+                        }
+                    });
+
+                });
+
+                note.appendChild(noteText);
+                note.appendChild(noteEdit);
+                panel.appendChild(note);
+
+                panel.setAttribute('class', 'history-element');
+                $(himage).click(function (event) {
+                    event.stopPropagation();
+                    load(userhistory[i].enabled, userhistory[i].mouseEnabled, userhistory[i].boxSelectors);
+                });
+                $(himage).hover(function () {
+                    if (!arrayEqual(enabled, hdata.enabled)) {
+                        showTimer = 1;
+                        showTemp(hdata);
+                    }
+                }, function () {
+                    hideTemp();
+                });
+                if (hdata.important == true) {
+                    $(himage).addClass('enabled');
+                }
+                if (hdata.note != null) {
                     $(himage).addClass('commented');
-                } else {
-                    $(himage).removeClass('commented');
                 }
-                editHistoryEntry(hdata._links.self.href, hdata);
-            })
+                panel.appendChild(himage);
 
-            edittext.keypress(function (e) {
-                if (e.which == 13) {
-                    let html = $(this).val();
-                    hdata.note = html;
-                    let viewtext = $("<div>");
-                    viewtext.html(html);
-                    $(this).replaceWith(viewtext);
-                }
-            });
+                let buttonbar = document.createElement('div');
+                buttonbar.setAttribute('class', 'history-buttonbar');
 
-        });
-
-        note.appendChild(noteText);
-        note.appendChild(noteEdit);
-        panel.appendChild(note);
-
-        panel.setAttribute('class', 'history-element');
-        $(himage).click(function (event) {
-            event.stopPropagation();
-            load(history[i].enabled, history[i].mouseEnabled, history[i].boxSelectors);
-            previousEntry = i;
-            console.log('loaded no ' + previousEntry);
-        });
-        $(himage).hover(function () {
-            if (!arrayEqual(enabled, hdata.enabled)) {
-                showTimer = 1;
-                showTemp(hdata);
-            }
-        }, function () {
-            hideTemp();
-        });
-        if (hdata.important == true) {
-            $(himage).addClass('enabled');
-        }
-        if (hdata.note != null) {
-            $(himage).addClass('commented');
-        }
-        panel.appendChild(himage);
-
-        let buttonbar = document.createElement('div');
-        buttonbar.setAttribute('class', 'history-buttonbar');
-
-        let importantButton = document.createElement('button');
-        importantButton.setAttribute('class', 'history-important-button');
-        importantButton.innerHTML = '<i class="fas fa-exclamation"></i>';
-        $(importantButton).click(function () {
-            $(himage).toggleClass('important');
-            $(importantButton).toggleClass('enabled');
-            hdata.important = !hdata.important;
-            editHistoryEntry(hdata._links.self.href, hdata);
-        });
+                let importantButton = document.createElement('button');
+                importantButton.setAttribute('class', 'history-important-button');
+                importantButton.innerHTML = '<i class="fas fa-exclamation"></i>';
+                $(importantButton).click(function () {
+                    $(himage).toggleClass('important');
+                    $(importantButton).toggleClass('enabled');
+                    hdata.important = !hdata.important;
+                    editHistoryEntry(hdata._links.self.href, hdata);
+                });
 
 
-        let commentButton = document.createElement('button');
-        commentButton.setAttribute('class', 'history-comment-button');
-        commentButton.innerHTML = '<i class="fas fa-comment"></i>'
-        $(commentButton).click(function () {
-            $(noteEdit).click();
-        })
+                let commentButton = document.createElement('button');
+                commentButton.setAttribute('class', 'history-comment-button');
+                commentButton.innerHTML = '<i class="fas fa-comment"></i>'
+                $(commentButton).click(function () {
+                    $(noteEdit).click();
+                })
 
-        buttonbar.appendChild(importantButton);
-        buttonbar.appendChild(commentButton);
+                buttonbar.appendChild(importantButton);
+                buttonbar.appendChild(commentButton);
 
-        panel.appendChild(buttonbar);
+                panel.appendChild(buttonbar);
 
-        $('#history').append(panel);
+                $('#userhistory').append(panel);
+            };
+        }, i * 30)
+
+
     }
+    setTimeout(function () {
+        $('.menucontent.social').find('.preview-panel').hide();
+        $('#userhistory').show();
+        historyCount2 = $('#userhistory').children().length;
+        historyTarget2 = historyCount2 - 1;
+        historyAnimation2 = true;
+        $('#userhistory').bind('mousewheel', function (e) {
+            console.log('a');
+            if (e.originalEvent.wheelDelta > 0) {
+                //right
+                if (historyTarget2 < historyCount2 - 1) {
+                    historyTarget2++;
+                    historyAnimation2 = true;
+                }
+            }
+            else {
+                //left        
+                if (historyTarget2 > 0) {
+                    historyTarget2--;
+                    historyAnimation2 = true;
+                }
+            }
+        });
+        let currentState = { enabled: enabled.slice(), boxSelectors: boxSelectors.slice(), mouseEnabled: mouseEnabled.slice() };
+        load(currentState.enabled, currentState.mouseEnabled, currentState.boxSelectors);
+    }, (userhistory.length+10)*30);
 
-    historyCount++;
-    historyTarget = historyCount - 1;
-    historyAnimation = true;
 }
 
 function createOptionsMenu() {
@@ -1217,7 +1271,8 @@ function loadBoxSelectors() {
 }
 
 function addHistoryEntry(index) {
-    svg = $('#worldmap').children().first()[0];
+    load(history[index].enabled, history[index].mouseEnabled, history[index].boxSelectors);
+    let svg = $('#worldmap').children().first()[0];
     var canvas = document.createElement('canvas');
     canvas.width = 902;
     canvas.height = 618;
@@ -1596,9 +1651,7 @@ function initHistory() {
     loadOwnHistory().then(function () {
         historyCount = history.length;
         historyWidth = $(document).width() - historyOffsetX * 2 - 360;
-
-        console.log('historywidth ' + historyWidth);
-        historyDom=$('#history');
+        historyDom = $('#history');
         historyLoadPanels(historyDom);
         historyInitPanels(historyDom);
         historyPanelLoop(historyDom);
@@ -1619,7 +1672,7 @@ function initHistory() {
                 }
             }
         });
-        // loadAllHistories();
+        loadAllHistories();
     })
 
 
@@ -1633,14 +1686,10 @@ function historyLoadPanels(dom) {
 
 function historyInitPanels(dom) {
     let ch = dom.children();
-    // historyTarget = -1;
-    // historyPosition = -1;
-    console.log('history position:' + historyPosition)
-    //console.log('changing:');
     for (let i = 0; i < historyCount; i++) {
         $(ch[i]).css('left', historyWidth * 0 + historyOffsetX + 'px');
     }
-    historyUpdateDOM(dom);
+    historyUpdateDOM(false);
 }
 
 function historyInitPanel(index, dom) {
@@ -1774,7 +1823,7 @@ function historyAddPanel(index) {
     panel.appendChild(buttonbar);
 
     $('#history').append(panel);
-    historyCount++;
+    historyCount = $('#history').children().length;
     historyTarget = historyCount - 1;
     historyAnimation = true;
 }
@@ -1818,17 +1867,24 @@ function hideTemp() {
 function historyPanelLoop(dom) {
     if (historyAnimation && (historyDisplayMode == 0)) {
         historyUpdatePosition();
-        historyUpdateDOM(dom);
+        historyUpdateDOM(false);
+    }
+    if (historyAnimation2 && (historyDisplayMode == 0)) {
+        historyUpdatePosition2();
+        historyUpdateDOM(true);
     }
     requestAnimationFrame(function () {
         historyPanelLoop(dom);
     });
 }
 
-function historyUpdateDOM(dom) {
-    let ch = dom.children();
+function historyUpdateDOM(user) {
+
+    let ch = [];
+    ch = user ? $('#userhistory').children() : $('#history').children();
     let hidden = [];
     let filtering = false;
+    let historyPos = user ? historyPosition2 : historyPosition;
     if (historyImpFilter || historyCommFilter) {
         let filtered = false;
         for (let i = 0; i < ch.length; i++) {
@@ -1861,12 +1917,12 @@ function historyUpdateDOM(dom) {
             historyModeInitial = false;
         }
     }
-
-    for (let i = 0; i < historyCount; i++) {
+    // console.log(historyCount + '   ' + ch.length);
+    for (let i = 0; i < ch.length; i++) {
 
         if (!hidden[i]) {
             $(ch[i]).show();
-            let pos = ((i) - historyPosition + historyRadius) / (historyRadius * 2);
+            let pos = ((i) - historyPos + historyRadius) / (historyRadius * 2);
             let size = 1 - Math.abs(pos - 0.5);
             let outside = (pos < -(1 / historyRadius)) || (pos > 1 + 1 / historyRadius);
             if (i == 0) {
@@ -1884,13 +1940,13 @@ function historyUpdateDOM(dom) {
                     pos = 1;
                     size = 0.5;
                 }
-                console.log(historyWidth * historyPositionConverter(pos) + historyOffsetX);
                 // $(ch[i]).css({
                 //     'left': historyWidth * historyPositionConverter(pos) + historyOffsetX + 'px',
                 //     'transform': 'scale(' + size + ')',
                 //     'z-index': Math.round(size * 10)
                 // });
-                console.log(historyWidth * historyPositionConverter(pos) + historyOffsetX+'px')
+                // console.log(i);
+                // console.log($(ch[i]));
                 $(ch[i]).css({
                     'left': historyWidth * historyPositionConverter(pos) + historyOffsetX + 'px',
                     'transform': 'scale(' + size + ')',
@@ -1931,6 +1987,17 @@ function historyUpdatePosition() {
         historyPosition = historyTarget;
         historyAnimation = false;
     } else historyPosition += historyMovement;
+}
+
+function historyUpdatePosition2() {
+    console.log('222');
+    console.log(historyPosition2);
+    console.log(historyTarget2);
+    historyMovement2 = (historyTarget2 - historyPosition2) / 8;
+    if (Math.abs(historyTarget2 - historyPosition2) < 0.005) {
+        historyPosition2 = historyTarget2;
+        historyAnimation2 = false;
+    } else historyPosition2 += historyMovement2;
 }
 
 

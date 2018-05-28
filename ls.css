@@ -244,6 +244,14 @@ body{
     top:calc(50% - 160px);
 }
 
+#userhistory{
+    position:absolute;
+    height:178px;
+    width:100%;
+    top:calc(50% - 160px);
+    display:none;
+}
+
 .history-element{
     height:232px;
     width:360px;
