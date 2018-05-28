@@ -69,9 +69,6 @@ let showTimer = 0;
 let historyDisplayMode = 0;
 let historyImpFilter = false;
 let historyCommFilter = false;
-let historyDoms=[];
-let historyPositions=[];
-let historyTargets=[];
 
 $('#choosedatabtn').focusout(function () {
     /*
@@ -280,9 +277,9 @@ function inlineWorldmap() {
     buildNamesMaps();
 }
 
-function copyWorldMap(){
-    let w=$('#worldmap').clone();
-    w.attr('id','worldmap-copy');
+function copyWorldMap() {
+    let w = $('#worldmap').clone();
+    w.attr('id', 'worldmap-copy');
     $('#main').append(w);
 }
 
@@ -729,6 +726,7 @@ function createMenus() {
 
     $('#main').append(menus);
     initHistory();
+
 }
 
 function createHistoryMenu() {
@@ -811,40 +809,212 @@ function createPanelMenu() {
 function createSocialMenu() {
     let content = document.createElement('div');
     content.setAttribute('class', 'menucontent social');
-    
-    content.append(getUserSelection());
 
 
     return content;
 }
 
-function getUserSelection(){
-    let usernames=[];
-    for(let i=0;i<allHistoryData.length;i++){
-        if(allHistoryData[i].lastName!=null && (allHistoryData[i].lastName!=currentUser)){
-            if(!(usernames.includes(allHistoryData[i].lastName))){
-                let user={lastName:allHistoryData[i].lastName,recentChange:allHistoryData[i].timestamp};
-                usernames.push(allHistoryData[i].lastName);
-            }else{
-                let index=usernames.find(allHistoryData[i].lastName);
-                if(allHistoryData[i].timestamp>usernames[index].recentChange) usernames[index].recentChange=allHistoryData[i].timestamp;
+function loadSocialMenu() {
+    let d = getUserSelection();
+    for (let i = 0; i < d.length; i++) {
+        $('.menucontent.social').append(d[i]);
+    }
+
+}
+
+function getUserSelection() {
+    let usernames = {};
+    console.log('hhh')
+    console.log(allHistoryData);
+    for (let i = 0; i < allHistoryData.length; i++) {
+        console.log(allHistoryData[i].lastName);
+        if (allHistoryData[i].lastName != null && (allHistoryData[i].lastName != currentUser)) {
+            if (!(allHistoryData[i].lastName in usernames)) {
+                usernames[allHistoryData[i].lastName] = allHistoryData[i].timestamp;
+            } else {
+                if (allHistoryData[i].timestamp > usernames[allHistoryData[i].lastName]) usernames[allHistoryData[i].lastName] = allHistoryData[i].timestamp;
             }
         }
     }
-
-    for(let i=0;i<usernames.length;i++){
-        let b=document.createElement('button');
-        b.setAttribute('class','preview-panel');
-        b.innerHTML=usernames[i].lastName+' time:'+usernames[i].recentChange;
-        $(b).click(function(){
-            loadUserHistory(usernames[i]);
+    let userDivs = [];
+    console.log('usernames');
+    console.log(usernames);
+    for (key in usernames) {
+        let b = document.createElement('button');
+        b.setAttribute('class', 'preview-panel');
+        console.log('key');
+        console.log(usernames[key]);
+        let d = new Date(usernames[key]);
+        console.log(d.getDate())
+        b.innerHTML = key;
+        //b.innerHTML=key+' ('+getLastActiveFormat(d)+')';
+        $(b).click(function () {
+            loadUserHistory(key);
         });
-
+        userDivs.push(b);
     }
+
+    return userDivs;
 }
 
-function loadUserHistory(username){
-    let div=$('.social');
+function getLastActiveFormat(date) {
+    let currentTime = new Date();
+    let minute = date.getMinutes();
+    let hour = date.getHours();
+    var day = date.getDate();
+    var month = date.getMonth();
+    let curMinute = currentTime.getMinutes();
+    let curHour = currentTime.getHours();
+    var curDay = currentTime.getDate();
+    var curMonth = currentTime.getMonth();
+    let dateString = "vor ";
+    if (month < curMonth) {
+        dateString += (curMonth - month) + " Monaten";
+    } else if (day < curDay) {
+        dateString += (curDay - day) + " Tagen";
+    } else if (hour < curHour) {
+        dateString += (curHour - hour) + " Stunden";
+    } else if (minute < curMinute - 1) {
+        dateString += (curMinute - minute) + " Minuten";
+    }
+    dateString += " aktiv";
+    return dateString;
+}
+
+function formatDate(date) {
+    let currentTime = Date().getTime();
+    var secs = date.getSeconds();
+    var mins = date.getMinutes();
+    let hours = date.getHours();
+    var day = date.getDate();
+    var month = date.getMonth();
+    var year = date.getFullYear();
+    let curSecs = currentTime.getSeconds();
+    let curMins = currentTime.getMinutes();
+    let curHours = currentTime.getHours();
+    var curDay = currentTime.getDate();
+    var curMonth = currentTime.getMonth();
+    var curYear = currentTime.getFullYear();
+
+
+
+    return day + ' ' + monthNames[monthIndex] + ' ' + year;
+}
+
+function loadUserHistory(username) {
+    let userhistory = [];
+    for (let i = 0; i < allHistoryData.length; i++) {
+        if (allHistoryData[i].lastName == username) userhistory.push(allHistoryData[i]);
+    }
+    for (let i = 0; i < userhistory.length; i++) {
+        let hdata = userhistory[index];
+        let panel = document.createElement('div');
+        let himage = document.createElement('img');
+        let i = index;
+        himage.setAttribute('src', hdata.img);
+        himage.setAttribute('class', 'history-image');
+        console.log('add panel');
+
+        let note = document.createElement('div');
+        note.setAttribute('class', 'history-note');
+
+        let noteText = document.createElement('div');
+        noteText.innerHTML = hdata.note || '';
+
+        let noteEdit = document.createElement('button');
+        noteEdit.setAttribute('class', 'top-right-edit-button');
+        noteEdit.innerHTML = '<i class="fas fa-pencil-alt"></i>';
+        $(noteEdit).click(function () {
+            let textarea = $(this).prev('div').html();
+            let edittext = $('<textarea spellcheck="false" />');
+            edittext.val(textarea);
+            $(this).prev('div').replaceWith(edittext);
+            edittext.focus();
+            edittext.blur(function () {
+                let html = $(this).val();
+                hdata.note = html;
+                let viewtext = $("<div>");
+                viewtext.html(html);
+                $(this).replaceWith(viewtext);
+                if (html != "") {
+                    $(himage).addClass('commented');
+                } else {
+                    $(himage).removeClass('commented');
+                }
+                editHistoryEntry(hdata._links.self.href, hdata);
+            })
+
+            edittext.keypress(function (e) {
+                if (e.which == 13) {
+                    let html = $(this).val();
+                    hdata.note = html;
+                    let viewtext = $("<div>");
+                    viewtext.html(html);
+                    $(this).replaceWith(viewtext);
+                }
+            });
+
+        });
+
+        note.appendChild(noteText);
+        note.appendChild(noteEdit);
+        panel.appendChild(note);
+
+        panel.setAttribute('class', 'history-element');
+        $(himage).click(function (event) {
+            event.stopPropagation();
+            load(history[i].enabled, history[i].mouseEnabled, history[i].boxSelectors);
+            previousEntry = i;
+            console.log('loaded no ' + previousEntry);
+        });
+        $(himage).hover(function () {
+            if (!arrayEqual(enabled, hdata.enabled)) {
+                showTimer = 1;
+                showTemp(hdata);
+            }
+        }, function () {
+            hideTemp();
+        });
+        if (hdata.important == true) {
+            $(himage).addClass('enabled');
+        }
+        if (hdata.note != null) {
+            $(himage).addClass('commented');
+        }
+        panel.appendChild(himage);
+
+        let buttonbar = document.createElement('div');
+        buttonbar.setAttribute('class', 'history-buttonbar');
+
+        let importantButton = document.createElement('button');
+        importantButton.setAttribute('class', 'history-important-button');
+        importantButton.innerHTML = '<i class="fas fa-exclamation"></i>';
+        $(importantButton).click(function () {
+            $(himage).toggleClass('important');
+            $(importantButton).toggleClass('enabled');
+            hdata.important = !hdata.important;
+            editHistoryEntry(hdata._links.self.href, hdata);
+        });
+
+
+        let commentButton = document.createElement('button');
+        commentButton.setAttribute('class', 'history-comment-button');
+        commentButton.innerHTML = '<i class="fas fa-comment"></i>'
+        $(commentButton).click(function () {
+            $(noteEdit).click();
+        })
+
+        buttonbar.appendChild(importantButton);
+        buttonbar.appendChild(commentButton);
+
+        panel.appendChild(buttonbar);
+
+        $('#history').append(panel);
+    }
+
+    historyCount++;
+    historyTarget = historyCount - 1;
+    historyAnimation = true;
 }
 
 function createOptionsMenu() {
@@ -1422,34 +1592,34 @@ function enableDragging() {
  */
 
 function initHistory() {
-    
+
     loadOwnHistory().then(function () {
         historyCount = history.length;
         historyWidth = $(document).width() - historyOffsetX * 2 - 360;
 
         console.log('historywidth ' + historyWidth);
-        historyDoms.push($('#history'));
-        historyLoadPanels(historyDoms[0]);
-        historyInitPanels(historyDoms[0]);
-        historyPanelLoop(historyDoms[0]);
+        historyDom=$('#history');
+        historyLoadPanels(historyDom);
+        historyInitPanels(historyDom);
+        historyPanelLoop(historyDom);
         // historyUpdateDOM();
         $('#history').bind('mousewheel', function (e) {
             if (e.originalEvent.wheelDelta > 0) {
                 //right
-                if (historyTargets[0] < historyCounts[0] - 1) {
-                    historyTargets[0]++;
-                    historyAnimations[0] = true;
+                if (historyTarget < historyCount - 1) {
+                    historyTarget++;
+                    historyAnimation = true;
                 }
             }
             else {
                 //left        
-                if (historyTargets[0] > 0) {
-                    historyTargets[0]--;
-                    historyAnimations[0] = true;
+                if (historyTarget > 0) {
+                    historyTarget--;
+                    historyAnimation = true;
                 }
             }
         });
-        loadAllHistories();
+        // loadAllHistories();
     })
 
 
@@ -1457,7 +1627,7 @@ function initHistory() {
 
 function historyLoadPanels(dom) {
     for (let i = 0; i < 0; i++) {
-        historyInitPanel(i,dom);
+        historyInitPanel(i, dom);
     }
 }
 
@@ -1473,7 +1643,7 @@ function historyInitPanels(dom) {
     historyUpdateDOM(dom);
 }
 
-function historyInitPanel(index,dom) {
+function historyInitPanel(index, dom) {
     let panel = document.createElement('div');
     panel.setAttribute('class', 'history-element');
     dom.append(panel);
@@ -1650,7 +1820,7 @@ function historyPanelLoop(dom) {
         historyUpdatePosition();
         historyUpdateDOM(dom);
     }
-    requestAnimationFrame(function(){
+    requestAnimationFrame(function () {
         historyPanelLoop(dom);
     });
 }
@@ -1714,6 +1884,13 @@ function historyUpdateDOM(dom) {
                     pos = 1;
                     size = 0.5;
                 }
+                console.log(historyWidth * historyPositionConverter(pos) + historyOffsetX);
+                // $(ch[i]).css({
+                //     'left': historyWidth * historyPositionConverter(pos) + historyOffsetX + 'px',
+                //     'transform': 'scale(' + size + ')',
+                //     'z-index': Math.round(size * 10)
+                // });
+                console.log(historyWidth * historyPositionConverter(pos) + historyOffsetX+'px')
                 $(ch[i]).css({
                     'left': historyWidth * historyPositionConverter(pos) + historyOffsetX + 'px',
                     'transform': 'scale(' + size + ')',
@@ -1750,7 +1927,6 @@ function historyPositionConverter(pos) {
 
 function historyUpdatePosition() {
     historyMovement = (historyTarget - historyPosition) / 8;
-    console.log(historyTarget-historyPosition);
     if (Math.abs(historyTarget - historyPosition) < 0.005) {
         historyPosition = historyTarget;
         historyAnimation = false;
@@ -1832,6 +2008,7 @@ function loadAllHistories() {
         console.log('data loadedddd');
         allHistoryData = data._embedded.history;
         console.log(allHistoryData);
+        loadSocialMenu();
     })
 }
 
