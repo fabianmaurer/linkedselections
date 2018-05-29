@@ -988,6 +988,12 @@ function loadUserHistory(username) {
                             let viewtext = $("<div>");
                             viewtext.html(html);
                             $(this).replaceWith(viewtext);
+                            if (html != "") {
+                                $(himage).addClass('commented');
+                            } else {
+                                $(himage).removeClass('commented');
+                            }
+                            editHistoryEntry(hdata._links.self.href, hdata);
                         }
                     });
 
@@ -1796,6 +1802,12 @@ function historyAddPanel(index) {
                 let viewtext = $("<div>");
                 viewtext.html(html);
                 $(this).replaceWith(viewtext);
+                if (html != "") {
+                    $(himage).addClass('commented');
+                } else {
+                    $(himage).removeClass('commented');
+                }
+                editHistoryEntry(hdata._links.self.href, hdata);
             }
         });
 
