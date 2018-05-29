@@ -555,7 +555,7 @@ function drawScatterPlot(dataX, dataY, ctx, $graph, index) {
     ctx.textAlign = "center";
     ctx.fillText(dataX, width / 2 - margin, -10 + 0);
     ctx.rotate(0.5 * Math.PI);
-    ctx.fillText(dataY, width / 2 - margin, 10 + 6);
+    ctx.fillText(dataY, width / 2 - margin, 10 + 8);
     ctx.rotate(-0.5 * Math.PI);
     ctx.translate(-margin, -margin);
 }
@@ -1055,9 +1055,15 @@ function loadUserHistory(username) {
 
     }
     setTimeout(function () {
+        let children= $('#userhistory').children();
+        for (let i = 0; i < children.length; i++) {
+            $(children[i]).css('left', historyWidth * 0 + historyOffsetX + 'px');
+            $(children[i]).css('transform', 'scale(0.5)');
+            
+        }
         $('.menucontent.social').find('.preview-panel').hide();
         $('#userhistory').show();
-        historyCount2 = $('#userhistory').children().length;
+        historyCount2 = children.length;
         historyTarget2 = historyCount2 - 1;
         historyAnimation2 = true;
         $('#userhistory').bind('mousewheel', function (e) {
@@ -1077,7 +1083,7 @@ function loadUserHistory(username) {
             }
         });
         load(currentState.enabled, currentState.mouseEnabled, currentState.boxSelectors);
-    }, (userhistory.length+10)*30);
+    }, (userhistory.length+30)*30);
 
 }
 
@@ -1126,13 +1132,16 @@ function generatePanels() {
     availableProperties = Object.getOwnPropertyNames(data[1]);
     // remove country id property
     availableProperties.shift();
+    console.log('props');
+    console.log(availableProperties);
     let r1 = 0, r2 = 0;
+    let props=[13,24,51,63,32,41];
     for (let i = 0; i < numAvailableGraphs; i++) {
         // r1 = Math.floor(Math.random() * availableProperties.length);
         // r2 = Math.floor(Math.random() * (availableProperties.length - 1));
-        r1 = i;
-        r2 = availableProperties.length - i - 2;
-        if (r2 >= r1) r2++;
+        r1 = props[i];
+        r2 = 29;
+        // if (r2 >= r1) r2++;
         availablePanels.push([availableProperties[r1], availableProperties[r2]]);
     }
 }
@@ -1427,6 +1436,7 @@ function enableDragging() {
         }
     });
 
+
     $(window).mouseup(function (e) {
         predragging = false;
         if (vBoxDrag || hBoxDrag) {
@@ -1461,6 +1471,7 @@ function enableDragging() {
                 $('#dragbox').hide();
                 dragging = false;
                 if (selectionchange){
+                    console.log('oh no')
                     save();
                 }
             } else if (selector == 1) {
@@ -1773,6 +1784,8 @@ function historyAddPanel(index) {
             } else {
                 $(himage).removeClass('commented');
             }
+            console.log(hdata);
+            console.log(history);
             editHistoryEntry(hdata._links.self.href, hdata);
         })
 
@@ -2022,7 +2035,7 @@ function saveHistoryEntry(entry) {
     for (let i = 0; i < entry.boxSelectors.length; i++) {
         boxS.push(JSON.stringify(entry.boxSelectors[i]));
     }
-    $.ajax({
+    return $.ajax({
         url: serviceURL,
         type: 'POST',
         data: JSON.stringify({ lastName: currentUser, enabled: entry.enabled, previous: entry.previous, important: entry.important, note: entry.note, timestamp: entry.timestamp, boxSelectors: boxS, mouseEnabled: entry.mouseEnabled }),
@@ -2034,7 +2047,8 @@ function saveHistoryEntry(entry) {
         console.log(data);
 
         entry = data;
-
+        console.log(entry);
+        history[history.length-1]=entry;
     });
 
     // $.post(serviceURL,{lastName:currentUser,enabled:entry.enabled,previous:entry.previous,important:entry.important,note:entry.note,timestamp:entry.timestamp},function(data){
@@ -2081,6 +2095,7 @@ function loadOwnHistory() {
 
             h[i].boxSelectors = s;
             history.push(h[i]);
+            console.log(11111);
             addHistoryEntry(i,true);
         }
     })
