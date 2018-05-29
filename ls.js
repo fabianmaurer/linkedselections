@@ -22,6 +22,7 @@ let allHistoryData = [];
 let selectionchange = false;
 let svg = document.querySelector('svg');
 let countryDOMElements = [];
+let usernames = {};
 
 let historyCount = 0;
 let historyCount2 = 0;
@@ -634,7 +635,8 @@ function toggleMenu(type) {
 
     } else {
 
-        $('.overlay-header').html(type);
+        if(type=='social') $('.overlay-header').html('Cooperation');
+        else $('.overlay-header').html(type);
         $('.overlay-header').attr('class', 'overlay-header color-' + type);
         let $old = $('.menucontent.visible');
         if ($('#menucontainer').is(':visible')) {
@@ -833,7 +835,6 @@ function loadSocialMenu() {
 }
 
 function getUserSelection() {
-    let usernames = {};
     console.log('hhh')
     console.log(allHistoryData);
     for (let i = 0; i < allHistoryData.length; i++) {
@@ -907,6 +908,16 @@ function formatDate(date) {
 }
 
 function loadUserHistory(username) {
+    let backbutton=document.createElement('button');
+    backbutton.setAttribute('class','backbutton');
+    backbutton.innerHTML='<i class="fas fa-caret-left"></i>';
+    $(backbutton).click(function(){
+        $('#userhistory').children().remove();
+        $('#userhistory').css('display','');
+        $(backbutton).remove();
+        $('.menucontent.social').find('.preview-panel').show();
+    })
+    $('.menucontent.social').append(backbutton);
     let userhistory = [];
     for (let i = 0; i < allHistoryData.length; i++) {
         if (allHistoryData[i].lastName == username) userhistory.push(allHistoryData[i]);

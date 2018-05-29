@@ -228,7 +228,7 @@ body{
 }
 
 .graph-circle:hover .tooltip{
-    transition:opacity 0.2s ease 1s;
+    transition:opacity 0.2s ease 0.5s;
     opacity:1;
 }
 
@@ -526,7 +526,13 @@ body{
     opacity:1;
 }
 
-
+.buttonbar-top-left{
+    position:absolute;
+    top:0;
+    left:0;
+    /* border-radius:0 8px 0 0; */
+    overflow:hidden;
+}
 
 .history-buttonbar{
     position:absolute;
@@ -665,4 +671,17 @@ body{
     right:0px;
     top:0px;
     border:1px solid #666;
+}
+
+.backbutton{
+    position:absolute;
+    top:8px;
+    left:8px;
+    border:1px solid white;
+    font-size:24px;
+    color:white;
+    border-radius:5px;
+    background:none;
+    cursor:pointer;
+    width:28px;
 }
