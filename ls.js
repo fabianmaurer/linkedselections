@@ -999,8 +999,12 @@ function loadUserHistory(username) {
                 }, function () {
                     hideTemp();
                 });
+                console.log(hdata.important);
+                console.log(hdata.important==true);
                 if (hdata.important == true) {
-                    $(himage).addClass('enabled');
+                    console.log('himage')
+                    console.log(himage)
+                    $(himage).addClass('important');
                 }
                 if (hdata.note != null) {
                     $(himage).addClass('commented');
@@ -1793,7 +1797,7 @@ function historyAddPanel(index) {
         hideTemp();
     });
     if (hdata.important == true) {
-        $(himage).addClass('enabled');
+        $(himage).addClass('important');
     }
     if (hdata.note != null) {
         $(himage).addClass('commented');
@@ -2044,7 +2048,7 @@ function editHistoryEntry(url, entry) {
     $.ajax({
         url: url,
         type: 'PUT',
-        data: JSON.stringify({ lastName: currentUser, enabled: entry.enabled, previous: entry.previous, important: entry.important, note: entry.note, timestamp: entry.timestamp, boxSelectors: boxS, mouseEnabled: entry.mouseEnabled }),
+        data: JSON.stringify({ lastName: entry.lastName, enabled: entry.enabled, previous: entry.previous, important: entry.important, note: entry.note, timestamp: entry.timestamp, boxSelectors: boxS, mouseEnabled: entry.mouseEnabled }),
         contentType: 'application/json; charset=utf-8',
         dataType: 'json'
     })
