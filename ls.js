@@ -1050,7 +1050,7 @@ function loadUserHistory(username) {
 
                 $('#userhistory').append(panel);
             };
-        }, i * 30)
+        }, i * 20)
 
 
     }
@@ -1083,7 +1083,7 @@ function loadUserHistory(username) {
             }
         });
         load(currentState.enabled, currentState.mouseEnabled, currentState.boxSelectors);
-    }, (userhistory.length+30)*30);
+    }, (userhistory.length+50)*20);
 
 }
 
@@ -1956,14 +1956,15 @@ function historyUpdateDOM(user) {
             $(ch[i]).show();
             let pos = ((i) - historyPos + historyRadius) / (historyRadius * 2);
             let size = 1 - Math.abs(pos - 0.5);
-            let outside = (pos < -(1 / historyRadius)) || (pos > 1 + 1 / historyRadius);
+            let outsideL = (pos < -(1 / historyRadius));
+            let outsideR = (pos > 1 + 1 / historyRadius);
             if (i == 0) {
                 // console.log(historyPosition);
                 // console.log(historyRadius);
                 // console.log(outside);
 
             }
-            if (!outside) {
+            if (!(outsideL||outsideR)) {
                 if (pos < 0) {
                     pos = 0;
                     size = 0.5;
@@ -1989,6 +1990,21 @@ function historyUpdateDOM(user) {
                     $(ch[i]).find('.history-previous, .history-note').css('opacity', opacity);
                 }
 
+            }else{
+                if(outsideL){
+                    $(ch[i]).css({
+                        'left': '30px',
+                        'transform': 'scale(0.5)',
+                        'z-index': 0
+                    });
+                }else{
+                    $(ch[i]).css({
+                        'left': '1532px',
+                        'transform': 'scale(0.5)',
+                        'z-index': 0
+                    });
+                }
+                
             }
         } else {
             $(ch[i]).hide();
